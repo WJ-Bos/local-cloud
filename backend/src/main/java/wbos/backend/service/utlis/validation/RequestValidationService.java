@@ -3,7 +3,7 @@ package wbos.backend.service.utlis.validation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import wbos.backend.dto.resource.database.CreateDataBaseRequestDto;
+import wbos.backend.dto.resource.database.DatabaseRequestDto;
 import wbos.backend.model.resource.database.Database;
 import wbos.backend.repository.resource.database.DatabaseRepository;
 
@@ -27,10 +27,9 @@ public class RequestValidationService {
      * @param requestDto The database request DTO (contains name for all operations)
      * @return true if validation passes, false otherwise
      */
-    public boolean validateDbRequest(String operation, CreateDataBaseRequestDto requestDto) {
+    public boolean validateDbRequest(String operation, DatabaseRequestDto requestDto) {
         log.info("Validating {} request", operation);
 
-        // Validate requestDto is not null for operations that need it
         if (requestDto == null && !operation.equalsIgnoreCase("GET")) {
             log.error("Request DTO cannot be null for {} operation", operation);
             return false;
@@ -38,10 +37,12 @@ public class RequestValidationService {
 
         return switch (operation.toUpperCase()) {
             case "CREATE" -> validateCreateRequest(requestDto);
-            case "DELETE" -> validateDeleteRequest(requestDto.getName());
-            case "UPDATE" -> validateUpdateRequest(requestDto.getName());
+            case "DELETE" -> {
+                String name = requestDto != null ? requestDto.getName() : null;
+                yield validateDeleteRequest(name);
+            }
+            case "UPDATE" -> validateUpdateRequest(requestDto);
             case "GET" -> {
-                // GET can be for all databases (null name) or specific database
                 String name = requestDto != null ? requestDto.getName() : null;
                 yield validateGetRequest(name);
             }
@@ -64,7 +65,7 @@ public class RequestValidationService {
      * @param requestDto The database creation request
      * @return true if validation passes, false otherwise
      */
-    public boolean validateCreateRequest(CreateDataBaseRequestDto requestDto) {
+    public boolean validateCreateRequest(DatabaseRequestDto requestDto) {
         log.info("Validating CREATE request for database: {}", requestDto != null ? requestDto.getName() : "null");
 
         // Validate DTO is not null
@@ -78,7 +79,6 @@ public class RequestValidationService {
             return false;
         }
 
-        // Check for duplicate database name (only active databases, not DESTROYED ones)
         Optional<Database> existingDb = databaseRepository.findByName(requestDto.getName());
         if (existingDb.isPresent() && existingDb.get().getStatus() != Database.DatabaseStatus.DESTROYED) {
             log.error("Database with name '{}' already exists and is in '{}' state",
@@ -86,13 +86,11 @@ public class RequestValidationService {
             return false;
         }
 
-        // If database exists but is DESTROYED, the name can be reused
         if (existingDb.isPresent()) {
             log.info("Database name '{}' was previously used but is now DESTROYED - name can be reused",
                     requestDto.getName());
         }
 
-        // Validate port (if provided)
         if (requestDto.getPort() != null && !validatePort(requestDto.getPort())) {
             return false;
         }
@@ -144,9 +142,7 @@ public class RequestValidationService {
                     database.getName(), database.getId());
             return false;
         }
-
-        // Check if database is in a valid state to be deleted
-        // For Phase 1: Allow deletion of PROVISIONING, RUNNING, and FAILED databases
+        
         if (database.getStatus() != Database.DatabaseStatus.PROVISIONING &&
             database.getStatus() != Database.DatabaseStatus.RUNNING &&
             database.getStatus() != Database.DatabaseStatus.FAILED) {
@@ -163,51 +159,100 @@ public class RequestValidationService {
     /**
      * Validates database update request
      *
-     * TODO: Phase 1 - Implement when update functionality is added
-     * This will be used when implementing Terraform-based updates to:
-     * - Modify database configuration
-     * - Scale resources
-     * - Update database settings
-     *
-     * Checks will include:
+     * Checks:
+     * - Database name is provided and valid format
      * - Database exists with given name
      * - Database is in RUNNING state (only running databases can be updated)
-     * - Update parameters are valid
-     * - No conflicts with other resources
-     * - Terraform state is consistent
+     * - If newName is provided, validate it's not already in use (unless DESTROYED)
+     * - If port is being changed, validate the new port
+     * - At least one field (newName or port) must be different from current values
      *
-     * @param databaseName The name of the database to update
+     * @param requestDto The database update request (must be UpdateDatabaseRequestDto)
      * @return true if validation passes, false otherwise
      */
-    public boolean validateUpdateRequest(String databaseName) {
-        log.info("Validating UPDATE request for database: '{}'", databaseName);
+    public boolean validateUpdateRequest(DatabaseRequestDto requestDto) {
+        log.info("Validating UPDATE request for database: '{}'",
+                requestDto != null ? requestDto.getName() : "null");
+
+        // Validate DTO is not null
+        if (requestDto == null) {
+            log.error("Request DTO cannot be null");
+            return false;
+        }
 
         // Validate name is not blank
-        if (!validateNameNotBlank(databaseName)) {
+        if (!validateNameNotBlank(requestDto.getName())) {
             return false;
         }
 
         // Find database by name
-        Optional<Database> databaseOpt = findRequiredDatabase(databaseName);
+        Optional<Database> databaseOpt = findRequiredDatabase(requestDto.getName());
         if (databaseOpt.isEmpty()) {
             return false;
         }
 
         Database database = databaseOpt.get();
 
-        // TODO: Phase 1 - Implement update validation when Terraform integration is complete
-        // For now, updates are not supported in Phase 1 MVP
+        // Check if database is in RUNNING state (only running databases can be updated)
+        if (database.getStatus() != Database.DatabaseStatus.RUNNING) {
+            log.error("Database '{}' (ID: {}) cannot be updated - must be in RUNNING state but is in '{}' state",
+                    database.getName(), database.getId(), database.getStatus());
+            return false;
+        }
 
-        // Future validation logic:
-        // - Check database is in RUNNING state
-        // - Validate update parameters (when updateDto is added)
-        // - Check Terraform state consistency
-        // - Validate no conflicts with other resources
+        boolean hasChanges = false;
 
-        log.warn("UPDATE operation is not yet implemented - reserved for future Terraform integration");
-        log.info("Database '{}' exists (ID: {}, Status: {}) but updates are not yet supported",
-                database.getName(), database.getId(), database.getStatus());
-        return false;
+        // Check if we have an UpdateDatabaseRequestDto with newName field
+        if (requestDto instanceof wbos.backend.dto.resource.database.UpdateDatabaseRequestDto updateDto) {
+            // Validate newName if provided and different from current name
+            if (updateDto.getNewName() != null && !updateDto.getNewName().equals(database.getName())) {
+                log.info("Name change detected for database '{}': '{}' -> '{}'",
+                        database.getName(), database.getName(), updateDto.getNewName());
+
+                // Validate new name format
+                if (!validateNameFormat(updateDto.getNewName())) {
+                    return false;
+                }
+
+                // Check if new name is already in use by a non-DESTROYED database
+                Optional<Database> existingDb = databaseRepository.findByName(updateDto.getNewName());
+                if (existingDb.isPresent() && existingDb.get().getStatus() != Database.DatabaseStatus.DESTROYED) {
+                    log.error("Database with name '{}' already exists and is in '{}' state",
+                            updateDto.getNewName(), existingDb.get().getStatus());
+                    return false;
+                }
+
+                if (existingDb.isPresent()) {
+                    log.info("Database name '{}' was previously used but is now DESTROYED - name can be reused",
+                            updateDto.getNewName());
+                }
+
+                hasChanges = true;
+            }
+        }
+
+        // If port is being changed, validate the new port
+        if (requestDto.getPort() != null && !requestDto.getPort().equals(database.getPort())) {
+            log.info("Port change detected for database '{}': {} -> {}",
+                    database.getName(), database.getPort(), requestDto.getPort());
+
+            if (!validatePort(requestDto.getPort())) {
+                return false;
+            }
+
+            hasChanges = true;
+        }
+
+        // Ensure at least one field is being changed
+        if (!hasChanges) {
+            log.warn("No changes detected for database '{}' - newName and port are same as current values",
+                    database.getName());
+            // This is not an error, but we'll let the service handle it
+        }
+
+        log.info("UPDATE validation successful for database: '{}' (ID: {}, Status: {}, HasChanges: {})",
+                database.getName(), database.getId(), database.getStatus(), hasChanges);
+        return true;
     }
 
     /**

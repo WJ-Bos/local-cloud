@@ -29,4 +29,10 @@ public interface DatabaseRepository extends JpaRepository<Database, Long> {
      * Find database by port
      */
     Optional<Database> findByPort(Integer port);
+
+    /**
+     * Find all databases that are not destroyed
+     */
+    @Query("SELECT d FROM Database d WHERE d.status != 'DESTROYED' ORDER BY d.createdAt DESC")
+    java.util.List<Database> findAllActiveDatabase();
 }

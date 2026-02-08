@@ -1,28 +1,21 @@
 package wbos.backend.dto.resource.database;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+/**
+ * DTO for database creation requests
+ *
+ * Inherits common validation rules from DatabaseRequestDto.
+ * Can be extended with create-specific fields if needed.
+ */
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-public class CreateDataBaseRequestDto {
-
-    @NotBlank(message = "Database name is required")
-    @Pattern(
-        regexp = "^[a-z0-9-]+$",
-        message = "Database name must contain only lowercase letters, numbers, and hyphens"
-    )
-    private String name;
-
-    @Min(value = 5433, message = "Port must be at least 5433 (5432 is reserved for platform database)")
-    @Max(value = 65535, message = "Port must be less than 65536")
-    private Integer port; // Optional - if null, auto-assign
+@EqualsAndHashCode(callSuper = true)
+public class CreateDataBaseRequestDto extends DatabaseRequestDto {
+    // All fields are inherited from DatabaseRequestDto
+    // Add create-specific fields here if needed in the future
 }
