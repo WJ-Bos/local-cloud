@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Toaster } from 'react-hot-toast';
 import Modal from './components/Modal';
 import DatabaseForm from './components/DatabaseForm';
 import DatabaseTable from './components/DatabaseTable';
@@ -39,6 +40,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-dark via-primary-darker to-primary-dark">
+      <Toaster />
       {/* Top Navigation */}
       <nav className="bg-primary-blue border-b border-primary-gray-800">
         <div className="px-6 py-3">
@@ -86,15 +88,33 @@ function App() {
                   Manage your PostgreSQL database instances
                 </p>
               </div>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-6 py-2.5 bg-gradient-to-r from-primary-orange to-primary-orange-dark hover:from-primary-orange-dark hover:to-primary-orange text-white font-semibold rounded-md transition-all shadow-lg shadow-primary-orange/20 flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Create Database
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Resync Button */}
+                <button
+                  onClick={() => {
+                    console.log('Resyncing databases...');
+                    // TODO: Implement API call to refresh database list
+                  }}
+                  className="px-4 py-2.5 bg-primary-gray-800 hover:bg-primary-gray-700 text-white font-medium rounded-md transition-colors border border-primary-gray-700 flex items-center gap-2"
+                  title="Refresh database list"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Resync
+                </button>
+
+                {/* Create Database Button */}
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-primary-orange to-primary-orange-dark hover:from-primary-orange-dark hover:to-primary-orange text-white font-semibold rounded-md transition-all shadow-lg shadow-primary-orange/20 flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Database
+                </button>
+              </div>
             </div>
           </div>
 

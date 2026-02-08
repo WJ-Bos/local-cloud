@@ -40,13 +40,10 @@ public class WebSecurityConfig {
         log.info("Configuring security filter chain");
 
         http
-            // CORS configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-            // CSRF disabled for stateless REST API
             .csrf(csrf -> csrf.disable())
 
-            // Session management - stateless for REST API
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
