@@ -53,12 +53,14 @@ public class WebSecurityConfig {
 
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
+                // Actuator endpoints for health checks
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
                 // Phase 1: Permit all requests (no authentication)
                 .anyRequest().permitAll()
 
                 // Future phases: Uncomment below for authentication
-                // .requestMatchers("/api/v1/auth/**").permitAll()
-                // .requestMatchers("/api/v1/health").permitAll()
+                // .requestMatchers("/auth/**").permitAll()
                 // .anyRequest().authenticated()
             );
 

@@ -88,7 +88,7 @@ public class DatabaseProvisionService {
      */
     private DatabaseResponseDto convertToDto(Database database) {
         return DatabaseResponseDto.builder()
-                .id(database.getId().toString())
+                .id(database.getId())
                 .name(database.getName())
                 .status(database.getStatus().name())
                 .port(database.getPort())

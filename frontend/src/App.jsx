@@ -9,7 +9,7 @@ function App() {
   // Mock data for demonstration
   const [databases] = useState([
     {
-      id: '550e8400-e29b-41d4-a716-446655440001',
+      id: 1,
       name: 'production-db',
       status: 'RUNNING',
       port: 5433,
@@ -17,7 +17,7 @@ function App() {
       createdAt: '2025-02-08T10:30:00Z',
     },
     {
-      id: '550e8400-e29b-41d4-a716-446655440002',
+      id: 2,
       name: 'staging-db',
       status: 'PROVISIONING',
       port: 5434,
@@ -25,7 +25,7 @@ function App() {
       createdAt: '2025-02-08T11:00:00Z',
     },
     {
-      id: '550e8400-e29b-41d4-a716-446655440003',
+      id: 3,
       name: 'test-db',
       status: 'FAILED',
       port: 5435,

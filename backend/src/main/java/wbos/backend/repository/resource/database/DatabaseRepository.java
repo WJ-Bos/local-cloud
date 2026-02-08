@@ -7,10 +7,9 @@ import org.springframework.stereotype.Repository;
 import wbos.backend.model.resource.database.Database;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface DatabaseRepository extends JpaRepository<Database, UUID> {
+public interface DatabaseRepository extends JpaRepository<Database, Long> {
 
     Optional<Database> findByName(String name);
 

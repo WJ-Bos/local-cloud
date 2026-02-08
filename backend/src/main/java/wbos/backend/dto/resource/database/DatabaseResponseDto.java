@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class DatabaseResponseDto {
 
-    private String id;
+    private Long id;
     private String name;
     private String status;
     private Integer port;
