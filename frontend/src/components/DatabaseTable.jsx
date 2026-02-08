@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
 import DatabaseDetailsModal from './DatabaseDetailsModal';
+import { DATABASE_TYPES } from './DatabaseTypeSelector';
 
 const DatabaseTable = ({ databases, onAction }) => {
   const [selectedDatabase, setSelectedDatabase] = useState(null);
@@ -24,27 +25,33 @@ const DatabaseTable = ({ databases, onAction }) => {
     }
   };
 
+  const getTypeInfo = (type) => {
+    return DATABASE_TYPES.find(t => t.id === type) || DATABASE_TYPES[0];
+  };
+
   if (databases.length === 0) {
     return (
-      <div className="bg-primary-gray-900 border border-primary-gray-800 rounded-lg p-12 text-center">
-        <svg
-          className="mx-auto h-16 w-16 text-primary-gray-600 mb-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      <div className="py-24 text-center">
+        <div className="w-12 h-12 mx-auto mb-4 bg-white/[0.04] rounded-xl flex items-center justify-center">
+          <svg
+            className="h-6 w-6 text-primary-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
             strokeWidth={1.5}
-            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-          />
-        </svg>
-        <h3 className="text-lg font-semibold text-white mb-2">
-          No databases
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+            />
+          </svg>
+        </div>
+        <h3 className="text-sm font-medium text-white mb-1">
+          No databases configured
         </h3>
-        <p className="text-primary-gray-400 mb-6">
-          You haven't created any databases yet. Get started by creating your first PostgreSQL database.
+        <p className="text-sm text-primary-gray-600">
+          Get started by creating your first database instance
         </p>
       </div>
     );
@@ -52,61 +59,78 @@ const DatabaseTable = ({ databases, onAction }) => {
 
   return (
     <>
-      <div className="bg-primary-gray-900 border border-primary-gray-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-primary-gray-850 border-b border-primary-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Container ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Engine
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Port
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-primary-gray-400 uppercase tracking-wider">
-                  Created
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-primary-gray-800">
-              {databases.map((database) => (
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-[#111113]/95 backdrop-blur-sm">
+            <tr className="border-b border-white/[0.06]">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Database Name
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Container ID
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Port
+              </th>
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-primary-gray-500 uppercase tracking-wider">
+                Created
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {databases.map((database, index) => {
+              const typeInfo = getTypeInfo(database.type);
+              return (
                 <tr
                   key={database.id}
-                  className="hover:bg-primary-gray-850 transition-colors"
+                  className={`group border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${
+                    index === databases.length - 1 ? 'border-b-0' : ''
+                  }`}
                 >
                   {/* Name - Clickable */}
                   <td className="px-6 py-4">
                     <button
                       onClick={() => handleDatabaseClick(database)}
-                      className="text-left hover:text-primary-orange transition-colors"
+                      className="text-left"
                     >
-                      <div className="font-medium text-white hover:underline">
+                      <div className="text-sm font-medium text-white group-hover:text-white/80 transition-colors">
                         {database.name}
                       </div>
-                      <div className="text-xs text-primary-gray-500 mt-0.5">
-                        Click for details
+                      <div className="text-xs text-primary-gray-600 mt-0.5">
+                        Click to view
                       </div>
                     </button>
+                  </td>
+
+                  {/* Type */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg ${typeInfo.bgColor} flex items-center justify-center p-1.5`}>
+                        <img
+                          src={typeInfo.logo}
+                          alt={typeInfo.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <span className="text-sm text-primary-gray-400">{typeInfo.name}</span>
+                    </div>
                   </td>
 
                   {/* Container ID */}
                   <td className="px-6 py-4">
                     {database.containerId ? (
-                      <span className="text-sm font-mono text-primary-gray-300">
+                      <span className="text-xs font-mono text-primary-gray-500">
                         {database.containerId}
                       </span>
                     ) : (
-                      <span className="text-sm text-primary-gray-600 italic">
-                        Provisioning...
+                      <span className="text-xs text-primary-gray-700">
+                        —
                       </span>
                     )}
                   </td>
@@ -116,25 +140,28 @@ const DatabaseTable = ({ databases, onAction }) => {
                     <StatusBadge status={database.status} />
                   </td>
 
-                  {/* Engine */}
-                  <td className="px-6 py-4 text-primary-gray-300 text-sm">
-                    PostgreSQL 15
-                  </td>
-
                   {/* Port */}
-                  <td className="px-6 py-4 text-primary-gray-300 text-sm font-mono">
-                    {database.port || '-'}
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-mono text-primary-gray-500">
+                      {database.port || '—'}
+                    </span>
                   </td>
 
                   {/* Created */}
-                  <td className="px-6 py-4 text-primary-gray-300 text-sm">
-                    {new Date(database.createdAt).toLocaleString()}
+                  <td className="px-6 py-4">
+                    <span className="text-sm text-primary-gray-500">
+                      {new Date(database.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Details Modal */}

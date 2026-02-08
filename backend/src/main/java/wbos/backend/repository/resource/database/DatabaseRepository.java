@@ -19,10 +19,10 @@ public interface DatabaseRepository extends JpaRepository<Database, Long> {
     Integer findMaxPort();
 
     /**
-     * Check if a port is already in use by a database in PROVISIONING or RUNNING state
+     * Check if a port is already in use by a database in PROVISIONING, RUNNING, UPDATING, STARTING, or STOPPING state
      */
     @Query("SELECT CASE WHEN COUNT(d) > 0 THEN true ELSE false END FROM Database d " +
-           "WHERE d.port = :port AND d.status IN ('PROVISIONING', 'RUNNING')")
+           "WHERE d.port = :port AND d.status IN ('PROVISIONING', 'RUNNING', 'UPDATING', 'STARTING', 'STOPPING')")
     boolean isPortInUse(@Param("port") Integer port);
 
     /**

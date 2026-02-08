@@ -4,6 +4,7 @@ import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 
 const DatabaseActionsMenu = ({ database, onAction }) => {
   const isRunning = database.status === 'RUNNING';
+  const isStopped = database.status === 'STOPPED';
   const isProvisioning = database.status === 'PROVISIONING';
   const isDestroying = database.status === 'DESTROYING';
 
@@ -27,6 +28,30 @@ const DatabaseActionsMenu = ({ database, onAction }) => {
         leaveTo="transform opacity-0 scale-95"
       >
         <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-primary-gray-700 rounded-lg bg-primary-gray-850 border border-primary-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+          {/* Start */}
+          <div className="px-1 py-1">
+            <Menu.Item disabled={!isStopped || isDestroying}>
+              {({ active, disabled }) => (
+                <button
+                  onClick={() => handleAction('start')}
+                  disabled={disabled}
+                  className={`${
+                    active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
+                  } ${
+                    disabled ? 'opacity-50 cursor-not-allowed' : ''
+                  } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Start
+                  {!isStopped && <span className="ml-auto text-xs">(Not stopped)</span>}
+                </button>
+              )}
+            </Menu.Item>
+          </div>
+
           {/* Stop */}
           <div className="px-1 py-1">
             <Menu.Item disabled={!isRunning || isDestroying}>
@@ -76,7 +101,7 @@ const DatabaseActionsMenu = ({ database, onAction }) => {
 
           {/* Update */}
           <div className="px-1 py-1">
-            <Menu.Item disabled={!isRunning || isDestroying}>
+            <Menu.Item disabled={!isStopped || isDestroying}>
               {({ active, disabled }) => (
                 <button
                   onClick={() => handleAction('update')}
@@ -88,10 +113,10 @@ const DatabaseActionsMenu = ({ database, onAction }) => {
                   } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Update
-                  {!isRunning && <span className="ml-auto text-xs">(Not running)</span>}
+                  {!isStopped && <span className="ml-auto text-xs">(Stop first)</span>}
                 </button>
               )}
             </Menu.Item>

@@ -6,6 +6,7 @@ public enum DatabaseStatus {
     STOPPED,
     STARTING,
     STOPPING,
+    UPDATING,
     FAILED,
     DESTROYING,
     DESTROYED

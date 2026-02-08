@@ -31,7 +31,6 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
         currentProgress = Math.min(currentProgress + increment, 95);
         setProgress(currentProgress);
 
-        // Move to next step at certain thresholds
         const stepThreshold = ((stepIndex + 1) / steps.length) * 95;
         if (currentProgress >= stepThreshold && stepIndex < steps.length - 1) {
           stepIndex++;
@@ -52,30 +51,30 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
       <div className="space-y-6">
         {/* Database Name */}
         <div className="text-center">
-          <p className="text-sm text-primary-gray-400 mb-1">Creating</p>
-          <p className="text-xl font-semibold text-white">{databaseName}</p>
+          <p className="text-xs text-primary-gray-600 mb-1 uppercase tracking-wider">Creating</p>
+          <p className="text-lg font-semibold text-white">{databaseName}</p>
         </div>
 
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-primary-gray-400">Progress</span>
+            <span className="text-primary-gray-600">Progress</span>
             <span className="text-white font-medium">{Math.round(progress)}%</span>
           </div>
-          <div className="h-2 bg-primary-gray-800 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary-orange to-primary-orange-dark transition-all duration-300 ease-out"
+              className="h-full bg-white transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
         {/* Current Step */}
-        <div className="bg-primary-gray-900 border border-primary-gray-800 rounded-lg p-4">
+        <div className="bg-white/[0.02] border border-white/[0.08] rounded-lg p-4">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
               <svg
-                className="w-5 h-5 text-primary-orange animate-spin"
+                className="w-5 h-5 text-white animate-spin"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -95,8 +94,8 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-white">{steps[currentStep]?.label}...</p>
-              <p className="text-xs text-primary-gray-400 mt-0.5">
+              <p className="text-sm font-medium text-white">{steps[currentStep]?.label}</p>
+              <p className="text-xs text-primary-gray-600 mt-0.5">
                 This may take a few moments
               </p>
             </div>
@@ -108,16 +107,16 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
           {steps.map((step, index) => (
             <div key={index} className="flex items-center gap-3">
               <div
-                className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                   index < currentStep
-                    ? 'border-green-500 bg-green-500'
+                    ? 'border-emerald-500 bg-emerald-500'
                     : index === currentStep
-                    ? 'border-primary-orange bg-primary-orange'
-                    : 'border-primary-gray-700'
+                    ? 'border-white bg-white'
+                    : 'border-white/[0.12]'
                 }`}
               >
                 {index < currentStep ? (
-                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -125,12 +124,12 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
                     />
                   </svg>
                 ) : index === currentStep ? (
-                  <div className="w-2 h-2 bg-white rounded-full" />
+                  <div className="w-1.5 h-1.5 bg-black rounded-full" />
                 ) : null}
               </div>
               <p
                 className={`text-sm ${
-                  index <= currentStep ? 'text-white font-medium' : 'text-primary-gray-500'
+                  index <= currentStep ? 'text-white font-medium' : 'text-primary-gray-600'
                 }`}
               >
                 {step.label}
@@ -141,9 +140,8 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
 
         {/* Info */}
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-          <p className="text-xs text-blue-400 leading-relaxed">
-            <span className="font-semibold">Tip:</span> Your database will be available shortly.
-            You'll be able to connect once provisioning is complete.
+          <p className="text-xs text-blue-300">
+            Your database will be available shortly. You'll be able to connect once provisioning is complete.
           </p>
         </div>
       </div>
