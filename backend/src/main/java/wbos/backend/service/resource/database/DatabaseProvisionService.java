@@ -54,8 +54,15 @@ public class DatabaseProvisionService {
             // TODO: In Phase 1, implement Terraform execution here
             // 1. Generate Terraform configuration files
             // 2. Execute `terraform apply`
-            // 3. Capture outputs (connection string)
-            // 4. Update database status to RUNNING
+            // 3. Capture outputs:
+            //    - connection_string: postgresql://...
+            //    - container_id: Docker container ID (12-char short ID or full 64-char ID)
+            // 4. Update database with container_id and connection_string
+            // 5. Update database status to RUNNING
+            //
+            // Example: After terraform apply, capture container ID:
+            //   docker ps --filter "name=<db-name>" --format "{{.ID}}"
+            //   OR from Terraform output if configured
 
             // Convert to DTO
             DatabaseResponseDto responseDto = convertToDto(database);
@@ -90,6 +97,7 @@ public class DatabaseProvisionService {
         return DatabaseResponseDto.builder()
                 .id(database.getId())
                 .name(database.getName())
+                .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())
                 .connectionString(database.getConnectionString())

@@ -15,6 +15,7 @@ public class DatabaseResponseDto {
 
     private Long id;
     private String name;
+    private String containerId;
     private String status;
     private Integer port;
     private String connectionString;

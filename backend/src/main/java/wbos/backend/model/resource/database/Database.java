@@ -29,6 +29,9 @@ public class Database {
     @Enumerated(EnumType.STRING)
     private DatabaseStatus status;
 
+    @Column(name = "container_id")
+    private String containerId;
+
     @Column(name = "terraform_state_path")
     private String terraformStatePath;
 

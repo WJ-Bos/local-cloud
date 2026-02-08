@@ -32,7 +32,13 @@ const DatabaseTableRow = ({ database }) => {
         </td>
         <td className="px-6 py-4">
           <div className="font-medium text-white">{database.name}</div>
-          <div className="text-xs text-primary-gray-500 font-mono mt-1">{database.id}</div>
+          <div className="text-xs text-primary-gray-500 font-mono mt-1">
+            {database.containerId ? (
+              <span title="Docker Container ID">{database.containerId}</span>
+            ) : (
+              <span className="text-primary-gray-600 italic">Provisioning...</span>
+            )}
+          </div>
         </td>
         <td className="px-6 py-4">
           <StatusBadge status={database.status} />
@@ -96,27 +102,66 @@ const DatabaseTableRow = ({ database }) => {
                   </svg>
                   Resource Information
                 </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-primary-gray-400">Database ID:</span>
-                    <span className="text-primary-gray-200 font-mono text-xs">{database.id}</span>
+                <div className="space-y-3">
+                  {/* Container ID - Prominent */}
+                  {database.containerId && (
+                    <div className="bg-primary-gray-850 rounded p-3 border border-primary-gray-700">
+                      <div className="text-xs text-primary-gray-400 mb-1 flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                        </svg>
+                        Docker Container ID
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-mono text-primary-orange">{database.containerId}</div>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(database.containerId)}
+                          className="text-xs text-primary-gray-400 hover:text-primary-orange transition-colors"
+                          title="Copy Container ID"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Info */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-primary-gray-400">Engine:</span>
+                      <span className="text-primary-gray-200">PostgreSQL 15</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-primary-gray-400">Status:</span>
+                      <span className="text-primary-gray-200">{database.status}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-primary-gray-400">Created:</span>
+                      <span className="text-primary-gray-200">{new Date(database.createdAt).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-primary-gray-400">Storage:</span>
+                      <span className="text-primary-gray-200">Docker Volume</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-primary-gray-400">Engine:</span>
-                    <span className="text-primary-gray-200">PostgreSQL 15</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-primary-gray-400">Status:</span>
-                    <span className="text-primary-gray-200">{database.status}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-primary-gray-400">Created:</span>
-                    <span className="text-primary-gray-200">{new Date(database.createdAt).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-primary-gray-400">Storage:</span>
-                    <span className="text-primary-gray-200">Docker Volume</span>
-                  </div>
+
+                  {/* Docker Commands */}
+                  {database.containerId && (
+                    <div className="bg-primary-gray-900 rounded p-3 border border-primary-gray-700">
+                      <div className="text-xs text-primary-gray-400 mb-2 font-semibold">Quick Commands:</div>
+                      <div className="space-y-1 text-xs font-mono">
+                        <div className="text-primary-gray-300">
+                          <span className="text-primary-gray-500">$</span> docker logs {database.containerId}
+                        </div>
+                        <div className="text-primary-gray-300">
+                          <span className="text-primary-gray-500">$</span> docker inspect {database.containerId}
+                        </div>
+                        <div className="text-primary-gray-300">
+                          <span className="text-primary-gray-500">$</span> docker exec -it {database.containerId} psql
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

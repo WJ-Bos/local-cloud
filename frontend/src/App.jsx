@@ -11,6 +11,7 @@ function App() {
     {
       id: 1,
       name: 'production-db',
+      containerId: 'a1b2c3d4e5f6',
       status: 'RUNNING',
       port: 5433,
       connectionString: 'postgresql://postgres:password@localhost:5433/production-db',
@@ -19,6 +20,7 @@ function App() {
     {
       id: 2,
       name: 'staging-db',
+      containerId: 'b2c3d4e5f6a7',
       status: 'PROVISIONING',
       port: 5434,
       connectionString: null,
@@ -27,6 +29,7 @@ function App() {
     {
       id: 3,
       name: 'test-db',
+      containerId: null,
       status: 'FAILED',
       port: 5435,
       connectionString: null,
