@@ -348,3 +348,6 @@ override.tf.json
 terraform.rc
 
 # End of https://www.toptal.com/developers/gitignore/api/intellij,terraform,react,maven,java,node
+
+# Claude AI project documentation
+CLAUDE.md
