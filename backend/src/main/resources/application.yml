@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: local-cloud-control-plane
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/control_plane
+    username: control_plane
+    password: control_plane
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: "/api/v1"
+
+# Application-specific configuration
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5173  # Vite dev server
+      - http://localhost:3000  # Production frontend
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - Authorization
+      - Content-Type
+      - Accept
+      - X-Requested-With
+    exposed-headers:
+      - X-Total-Count
+      - X-Page-Number
+      - X-Page-Size
+    allow-credentials: true
+    max-age: 3600
+
+logging:
+  level:
+    wbos.backend: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: DEBUG
