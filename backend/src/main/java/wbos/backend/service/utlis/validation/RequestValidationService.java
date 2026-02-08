@@ -142,7 +142,7 @@ public class RequestValidationService {
                     database.getName(), database.getId());
             return false;
         }
-        
+
         if (database.getStatus() != Database.DatabaseStatus.PROVISIONING &&
             database.getStatus() != Database.DatabaseStatus.RUNNING &&
             database.getStatus() != Database.DatabaseStatus.FAILED) {
