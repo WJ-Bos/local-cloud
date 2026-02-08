@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import wbos.backend.dto.resource.database.DatabaseRequestDto;
+import wbos.backend.enums.DatabaseStatus;
 import wbos.backend.model.resource.database.Database;
 import wbos.backend.repository.resource.database.DatabaseRepository;
 
@@ -80,7 +81,7 @@ public class RequestValidationService {
         }
 
         Optional<Database> existingDb = databaseRepository.findByName(requestDto.getName());
-        if (existingDb.isPresent() && existingDb.get().getStatus() != Database.DatabaseStatus.DESTROYED) {
+        if (existingDb.isPresent() && existingDb.get().getStatus() != DatabaseStatus.DESTROYED) {
             log.error("Database with name '{}' already exists and is in '{}' state",
                     requestDto.getName(), existingDb.get().getStatus());
             return false;
@@ -130,22 +131,22 @@ public class RequestValidationService {
         Database database = databaseOpt.get();
 
         // Check if database is already being destroyed
-        if (database.getStatus() == Database.DatabaseStatus.DESTROYING) {
+        if (database.getStatus() == DatabaseStatus.DESTROYING) {
             log.error("Database '{}' (ID: {}) is already being destroyed",
                     database.getName(), database.getId());
             return false;
         }
 
         // Check if database is already destroyed
-        if (database.getStatus() == Database.DatabaseStatus.DESTROYED) {
+        if (database.getStatus() == DatabaseStatus.DESTROYED) {
             log.error("Database '{}' (ID: {}) is already destroyed",
                     database.getName(), database.getId());
             return false;
         }
 
-        if (database.getStatus() != Database.DatabaseStatus.PROVISIONING &&
-            database.getStatus() != Database.DatabaseStatus.RUNNING &&
-            database.getStatus() != Database.DatabaseStatus.FAILED) {
+        if (database.getStatus() != DatabaseStatus.PROVISIONING &&
+            database.getStatus() != DatabaseStatus.RUNNING &&
+            database.getStatus() != DatabaseStatus.FAILED) {
             log.error("Database '{}' (ID: {}) is in invalid state '{}' for deletion",
                     database.getName(), database.getId(), database.getStatus());
             return false;
@@ -194,7 +195,7 @@ public class RequestValidationService {
         Database database = databaseOpt.get();
 
         // Check if database is in RUNNING state (only running databases can be updated)
-        if (database.getStatus() != Database.DatabaseStatus.RUNNING) {
+        if (database.getStatus() != DatabaseStatus.RUNNING) {
             log.error("Database '{}' (ID: {}) cannot be updated - must be in RUNNING state but is in '{}' state",
                     database.getName(), database.getId(), database.getStatus());
             return false;
@@ -216,7 +217,7 @@ public class RequestValidationService {
 
                 // Check if new name is already in use by a non-DESTROYED database
                 Optional<Database> existingDb = databaseRepository.findByName(updateDto.getNewName());
-                if (existingDb.isPresent() && existingDb.get().getStatus() != Database.DatabaseStatus.DESTROYED) {
+                if (existingDb.isPresent() && existingDb.get().getStatus() != DatabaseStatus.DESTROYED) {
                     log.error("Database with name '{}' already exists and is in '{}' state",
                             updateDto.getNewName(), existingDb.get().getStatus());
                     return false;

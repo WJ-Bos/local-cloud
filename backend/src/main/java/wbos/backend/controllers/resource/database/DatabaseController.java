@@ -12,6 +12,7 @@ import wbos.backend.dto.resource.database.UpdateDatabaseRequestDto;
 import wbos.backend.service.resource.database.DatabaseDetailsService;
 import wbos.backend.service.resource.database.DatabaseProvisionService;
 import wbos.backend.service.resource.database.DatabaseUpdateService;
+import wbos.backend.service.resource.database.DatabaseDestroyService;
 import wbos.backend.service.utlis.validation.RequestValidationService;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class DatabaseController {
     private final RequestValidationService requestValidationService;
     private final DatabaseDetailsService databaseDetailsService;
     private final DatabaseUpdateService databaseUpdateService;
+    private final DatabaseDestroyService databaseDestroyService;
 
     /**
      * Creates a new PostgreSQL database instance
@@ -76,7 +78,6 @@ public class DatabaseController {
         log.info("Received update request for database: {} (newName: {}, port: {})",
                 name, updateRequestDto.getNewName(), updateRequestDto.getPort());
 
-        // Ensure the name in the path matches the name in the request body
         if (!name.equals(updateRequestDto.getName())) {
             log.error("Path name '{}' does not match request body name '{}'", name, updateRequestDto.getName());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -89,5 +90,17 @@ public class DatabaseController {
         }
 
         return databaseUpdateService.update(updateRequestDto);
+    }
+
+    /**
+     * Destroys a database instance
+     *
+     * @param id The ID of the database to destroy
+     * @return ResponseEntity with destruction status
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<DatabaseResponseDto> destroyDatabase(@PathVariable Long id) {
+        log.info("Received database destruction request for ID: {}", id);
+        return databaseDestroyService.destroy(id);
     }
 }

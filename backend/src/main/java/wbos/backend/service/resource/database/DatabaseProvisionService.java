@@ -8,8 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import wbos.backend.dto.resource.database.CreateDataBaseRequestDto;
 import wbos.backend.dto.resource.database.DatabaseResponseDto;
+import wbos.backend.enums.DatabaseStatus;
 import wbos.backend.model.resource.database.Database;
+import wbos.backend.records.TerraformResult;
 import wbos.backend.repository.resource.database.DatabaseRepository;
+import wbos.backend.service.infrastructure.TerraformService;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +22,7 @@ import wbos.backend.repository.resource.database.DatabaseRepository;
 public class DatabaseProvisionService {
 
     private final DatabaseRepository databaseRepository;
+    private final TerraformService terraformService;
 
     /**
      * Provisions a new PostgreSQL database
@@ -42,30 +48,72 @@ public class DatabaseProvisionService {
             // Create database entity with PROVISIONING status
             Database database = Database.builder()
                     .name(requestDto.getName())
-                    .status(Database.DatabaseStatus.PROVISIONING)
+                    .status(DatabaseStatus.PROVISIONING)
                     .port(assignedPort)
                     .terraformStatePath(String.format("/tmp/terraform/%s", requestDto.getName()))
                     .build();
 
             // Save to database
-            database = databaseRepository.save(database);
-            log.info("Database metadata saved with ID: {}", database.getId());
+            Database savedDatabase = databaseRepository.save(database);
+            log.info("Database metadata saved with ID: {}", savedDatabase.getId());
 
-            // TODO: In Phase 1, implement Terraform execution here
-            // 1. Generate Terraform configuration files
-            // 2. Execute `terraform apply`
-            // 3. Capture outputs:
-            //    - connection_string: postgresql://...
-            //    - container_id: Docker container ID (12-char short ID or full 64-char ID)
-            // 4. Update database with container_id and connection_string
-            // 5. Update database status to RUNNING
-            //
-            // Example: After terraform apply, capture container ID:
-            //   docker ps --filter "name=<db-name>" --format "{{.ID}}"
-            //   OR from Terraform output if configured
+            // Convert to DTO for immediate response
+            DatabaseResponseDto responseDto = convertToDto(savedDatabase);
 
-            // Convert to DTO
-            DatabaseResponseDto responseDto = convertToDto(database);
+            // Execute Terraform provisioning asynchronously
+            final Long dbId = savedDatabase.getId();
+            final String dbName = savedDatabase.getName();
+            final Integer dbPort = savedDatabase.getPort();
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    log.info("Starting async Terraform provisioning for: {}", dbName);
+
+                    // Execute Terraform
+                    TerraformResult result = terraformService.provisionPostgres(
+                            dbName,
+                            dbPort
+                    );
+
+                    // Fetch database from repository
+                    Database db = databaseRepository.findById(dbId).orElse(null);
+                    if (db == null) {
+                        log.error("Database not found: {}", dbId);
+                        return;
+                    }
+
+                    if (result.success()) {
+                        // Update database with connection details
+                        db.setConnectionString(result.connectionString());
+                        db.setContainerId(result.containerId());
+                        db.setStatus(DatabaseStatus.RUNNING);
+                        db.setTerraformStatePath(
+                                result.workingDirectory() != null
+                                        ? result.workingDirectory().toString()
+                                        : db.getTerraformStatePath()
+                        );
+
+                        databaseRepository.save(db);
+                        log.info("Database provisioned successfully: {} (container: {})",
+                                db.getName(),
+                                result.containerId());
+
+                    } else {
+                        db.setStatus(DatabaseStatus.FAILED);
+                        databaseRepository.save(db);
+                        log.error("Database provisioning failed: {} - {}",
+                                db.getName(),
+                                result.errorMessage());
+                    }
+
+                } catch (Exception e) {
+                    log.error("Exception during database provisioning: {}", dbName, e);
+                    databaseRepository.findById(dbId).ifPresent(db -> {
+                        db.setStatus(DatabaseStatus.FAILED);
+                        databaseRepository.save(db);
+                    });
+                }
+            });
 
             log.info("Database provisioning initiated successfully: {}", database.getName());
             return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);

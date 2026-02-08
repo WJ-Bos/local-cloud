@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Terraform CDK ###
+.gen/
+cdktf.out/
+.terraform/
+terraform.tfstate*
+*.tfstate*

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import wbos.backend.enums.DatabaseStatus;
 
 import java.time.LocalDateTime;
 
@@ -48,12 +49,4 @@ public class Database {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    public enum DatabaseStatus {
-        PROVISIONING,
-        RUNNING,
-        FAILED,
-        DESTROYING,
-        DESTROYED
-    }
 }
