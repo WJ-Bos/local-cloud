@@ -1,15 +1,21 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useState } from 'react';
 import { Dialog, Transition, Menu } from '@headlessui/react';
-import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronDownIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import StatusBadge from './StatusBadge';
 import toast from 'react-hot-toast';
 
 const DatabaseDetailsModal = ({ database, isOpen, onClose, onAction }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   if (!database) return null;
 
   const isRunning = database.status === 'RUNNING';
+  const isStopped = database.status === 'STOPPED';
   const isProvisioning = database.status === 'PROVISIONING';
   const isDestroying = database.status === 'DESTROYING';
+  const isStarting = database.status === 'STARTING';
+  const isStopping = database.status === 'STOPPING';
+  const isTransitioning = isProvisioning || isDestroying || isStarting || isStopping;
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -122,6 +128,35 @@ const DatabaseDetailsModal = ({ database, isOpen, onClose, onAction }) => {
                           <div className="text-xs text-primary-gray-400 mb-1">Port</div>
                           <div className="text-sm font-mono text-white">{database.port || 'N/A'}</div>
                         </div>
+                        {database.password && (
+                          <div className="bg-primary-gray-900 rounded p-3 border border-primary-gray-700">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-xs text-primary-gray-400">Password</div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="text-xs text-primary-gray-400 hover:text-white transition-colors"
+                                  title={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                  {showPassword ? (
+                                    <EyeSlashIcon className="w-4 h-4" />
+                                  ) : (
+                                    <EyeIcon className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleCopy(database.password)}
+                                  className="text-xs text-primary-orange hover:text-primary-orange-dark transition-colors"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-sm font-mono text-white">
+                              {showPassword ? database.password : '••••••••••••••••'}
+                            </div>
+                          </div>
+                        )}
                         {database.connectionString && (
                           <div className="bg-primary-gray-900 rounded p-3 border border-primary-gray-700">
                             <div className="flex items-center justify-between mb-1">
@@ -238,79 +273,53 @@ const DatabaseDetailsModal = ({ database, isOpen, onClose, onAction }) => {
                       leaveTo="transform opacity-0 scale-95"
                     >
                       <Menu.Items className="absolute bottom-full left-0 mb-2 w-full origin-bottom rounded-lg bg-primary-gray-850 border border-primary-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-primary-gray-700">
+                        {/* Start */}
+                        {isStopped && (
+                          <div className="px-1 py-1">
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button
+                                  onClick={() => handleAction('start')}
+                                  className={`${
+                                    active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
+                                  } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Start Database
+                                </button>
+                              )}
+                            </Menu.Item>
+                          </div>
+                        )}
+
                         {/* Stop */}
-                        <div className="px-1 py-1">
-                          <Menu.Item disabled={!isRunning || isDestroying}>
-                            {({ active, disabled }) => (
-                              <button
-                                onClick={() => handleAction('stop')}
-                                disabled={disabled}
-                                className={`${
-                                  active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
-                                } ${
-                                  disabled ? 'opacity-50 cursor-not-allowed' : ''
-                                } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                                </svg>
-                                Stop
-                                {!isRunning && <span className="ml-auto text-xs">(Not running)</span>}
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </div>
-
-                        {/* Restart */}
-                        <div className="px-1 py-1">
-                          <Menu.Item disabled={!isRunning || isDestroying}>
-                            {({ active, disabled }) => (
-                              <button
-                                onClick={() => handleAction('restart')}
-                                disabled={disabled}
-                                className={`${
-                                  active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
-                                } ${
-                                  disabled ? 'opacity-50 cursor-not-allowed' : ''
-                                } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Restart
-                                {!isRunning && <span className="ml-auto text-xs">(Not running)</span>}
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </div>
-
-                        {/* Update */}
-                        <div className="px-1 py-1">
-                          <Menu.Item disabled={!isRunning || isDestroying}>
-                            {({ active, disabled }) => (
-                              <button
-                                onClick={() => handleAction('update')}
-                                disabled={disabled}
-                                className={`${
-                                  active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
-                                } ${
-                                  disabled ? 'opacity-50 cursor-not-allowed' : ''
-                                } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
-                              >
-                                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Update
-                                {!isRunning && <span className="ml-auto text-xs">(Not running)</span>}
-                              </button>
-                            )}
-                          </Menu.Item>
-                        </div>
+                        {isRunning && (
+                          <div className="px-1 py-1">
+                            <Menu.Item>
+                              {({ active }) => (
+                                <button
+                                  onClick={() => handleAction('stop')}
+                                  className={`${
+                                    active ? 'bg-primary-gray-800 text-white' : 'text-primary-gray-300'
+                                  } group flex w-full items-center rounded-md px-3 py-2 text-sm transition-colors`}
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                  </svg>
+                                  Stop Database
+                                </button>
+                              )}
+                            </Menu.Item>
+                          </div>
+                        )}
 
                         {/* Delete */}
                         <div className="px-1 py-1">
-                          <Menu.Item disabled={isRunning || isDestroying}>
+                          <Menu.Item disabled={isDestroying}>
                             {({ active, disabled }) => (
                               <button
                                 onClick={() => handleAction('delete')}
@@ -324,8 +333,8 @@ const DatabaseDetailsModal = ({ database, isOpen, onClose, onAction }) => {
                                 <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                                Delete
-                                {isRunning && <span className="ml-auto text-xs">(Stop first)</span>}
+                                Delete Database
+                                {isDestroying && <span className="ml-auto text-xs">(In progress)</span>}
                               </button>
                             )}
                           </Menu.Item>

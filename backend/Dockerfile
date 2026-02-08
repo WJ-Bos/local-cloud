@@ -20,6 +20,16 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
+# Install Terraform and Docker CLI
+RUN apk add --no-cache curl unzip docker-cli && \
+    TERRAFORM_VERSION=1.7.4 && \
+    curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip && \
+    unzip terraform.zip && \
+    mv terraform /usr/local/bin/ && \
+    rm terraform.zip && \
+    terraform version && \
+    docker --version
+
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/*.jar app.jar
 

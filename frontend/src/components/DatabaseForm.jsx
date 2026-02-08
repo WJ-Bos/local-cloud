@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const DatabaseForm = ({ onClose }) => {
+const DatabaseForm = ({ onSubmit, onClose }) => {
   const [databaseName, setDatabaseName] = useState('');
   const [port, setPort] = useState('');
   const [useAutoPort, setUseAutoPort] = useState(true);
@@ -27,17 +27,16 @@ const DatabaseForm = ({ onClose }) => {
       ...((!useAutoPort && port) && { port: parseInt(port) })
     };
 
-    // TODO: Implement API call
-    console.log('Creating database:', payload);
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await onSubmit(payload);
       setDatabaseName('');
       setPort('');
       setUseAutoPort(true);
-      onClose();
-    }, 1000);
+    } catch (error) {
+      setError(error.message || 'Failed to create database');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

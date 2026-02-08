@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, hideCloseButton = false }) => {
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !hideCloseButton) onClose();
     };
 
     if (isOpen) {
@@ -15,7 +15,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, hideCloseButton]);
 
   if (!isOpen) return null;
 
@@ -24,7 +24,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black bg-opacity-75 transition-opacity"
-        onClick={onClose}
+        onClick={hideCloseButton ? undefined : onClose}
       />
 
       {/* Modal */}
@@ -33,14 +33,16 @@ const Modal = ({ isOpen, onClose, title, children }) => {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-primary-gray-700">
             <h2 className="text-xl font-semibold text-white">{title}</h2>
-            <button
-              onClick={onClose}
-              className="text-primary-gray-400 hover:text-white transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {!hideCloseButton && (
+              <button
+                onClick={onClose}
+                className="text-primary-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Content */}

@@ -1,42 +1,129 @@
-import { useState } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import { Toaster, toast } from 'react-hot-toast';
 import Modal from './components/Modal';
 import DatabaseForm from './components/DatabaseForm';
 import DatabaseTable from './components/DatabaseTable';
+import ProvisioningModal from './components/ProvisioningModal';
+import DeleteConfirmationModal from './components/DeleteConfirmationModal';
+import databaseService from './services/databaseService';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProvisioningModalOpen, setIsProvisioningModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [databaseToDelete, setDatabaseToDelete] = useState(null);
+  const [provisioningDatabaseName, setProvisioningDatabaseName] = useState('');
+  const [databases, setDatabases] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for demonstration
-  const [databases] = useState([
-    {
-      id: 1,
-      name: 'production-db',
-      containerId: 'a1b2c3d4e5f6',
-      status: 'RUNNING',
-      port: 5433,
-      connectionString: 'postgresql://postgres:password@localhost:5433/production-db',
-      createdAt: '2025-02-08T10:30:00Z',
-    },
-    {
-      id: 2,
-      name: 'staging-db',
-      containerId: 'b2c3d4e5f6a7',
-      status: 'PROVISIONING',
-      port: 5434,
-      connectionString: null,
-      createdAt: '2025-02-08T11:00:00Z',
-    },
-    {
-      id: 3,
-      name: 'test-db',
-      containerId: null,
-      status: 'FAILED',
-      port: 5435,
-      connectionString: null,
-      createdAt: '2025-02-08T11:15:00Z',
-    },
-  ]);
+  // Fetch databases on mount
+  useEffect(() => {
+    fetchDatabases();
+  }, []);
+
+  // Poll for active operations (PROVISIONING, DESTROYING, STARTING, STOPPING)
+  useEffect(() => {
+    const hasActiveOperation = databases.some(
+      db => ['PROVISIONING', 'DESTROYING', 'STARTING', 'STOPPING'].includes(db.status)
+    );
+    if (!hasActiveOperation) return;
+
+    const pollInterval = setInterval(() => {
+      fetchDatabases();
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [databases]);
+
+  const fetchDatabases = async () => {
+    try {
+      const data = await databaseService.getAllDatabases();
+      setDatabases(data);
+      setLoading(false);
+
+      // Close provisioning modal if database is no longer provisioning
+      if (isProvisioningModalOpen) {
+        const provisioningDb = data.find(
+          db => db.name === provisioningDatabaseName && db.status !== 'PROVISIONING'
+        );
+        if (provisioningDb) {
+          setIsProvisioningModalOpen(false);
+          if (provisioningDb.status === 'RUNNING') {
+            toast.success(`Database "${provisioningDb.name}" is now running!`);
+          } else if (provisioningDb.status === 'FAILED') {
+            toast.error(`Database "${provisioningDb.name}" failed to provision`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch databases:', error);
+      toast.error('Failed to fetch databases');
+      setLoading(false);
+    }
+  };
+
+  const handleCreateDatabase = async (formData) => {
+    try {
+      const newDb = await databaseService.createDatabase(formData);
+      setIsModalOpen(false);
+      setProvisioningDatabaseName(newDb.name);
+      setIsProvisioningModalOpen(true);
+      toast.success('Database creation initiated!');
+      fetchDatabases();
+    } catch (error) {
+      console.error('Failed to create database:', error);
+      toast.error(error.response?.data?.message || 'Failed to create database');
+    }
+  };
+
+  const handleResync = async () => {
+    toast.loading('Resyncing databases...', { id: 'resync' });
+    await fetchDatabases();
+    toast.success('Databases resynced!', { id: 'resync' });
+  };
+
+  const handleDatabaseAction = async (database, action) => {
+    if (action === 'delete') {
+      setDatabaseToDelete(database);
+      setIsDeleteModalOpen(true);
+    } else if (action === 'stop') {
+      try {
+        toast.loading(`Stopping ${database.name}...`, { id: 'stop' });
+        await databaseService.stopDatabase(database.id);
+        toast.success(`Database "${database.name}" is stopping!`, { id: 'stop' });
+        fetchDatabases();
+      } catch (error) {
+        console.error('Failed to stop database:', error);
+        toast.error(error.response?.data?.message || 'Failed to stop database', { id: 'stop' });
+      }
+    } else if (action === 'start') {
+      try {
+        toast.loading(`Starting ${database.name}...`, { id: 'start' });
+        await databaseService.startDatabase(database.id);
+        toast.success(`Database "${database.name}" is starting!`, { id: 'start' });
+        fetchDatabases();
+      } catch (error) {
+        console.error('Failed to start database:', error);
+        toast.error(error.response?.data?.message || 'Failed to start database', { id: 'start' });
+      }
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!databaseToDelete) return;
+
+    try {
+      setIsDeleteModalOpen(false);
+      toast.loading(`Deleting ${databaseToDelete.name}...`, { id: 'delete' });
+      await databaseService.deleteDatabase(databaseToDelete.id);
+      toast.success(`Database "${databaseToDelete.name}" is being destroyed!`, { id: 'delete' });
+      setDatabaseToDelete(null);
+      fetchDatabases();
+    } catch (error) {
+      console.error('Failed to delete database:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete database', { id: 'delete' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-dark via-primary-darker to-primary-dark">
@@ -91,10 +178,7 @@ function App() {
               <div className="flex items-center gap-3">
                 {/* Resync Button */}
                 <button
-                  onClick={() => {
-                    console.log('Resyncing databases...');
-                    // TODO: Implement API call to refresh database list
-                  }}
+                  onClick={handleResync}
                   className="px-4 py-2.5 bg-primary-gray-800 hover:bg-primary-gray-700 text-white font-medium rounded-md transition-colors border border-primary-gray-700 flex items-center gap-2"
                   title="Refresh database list"
                 >
@@ -182,7 +266,7 @@ function App() {
           </div>
 
           {/* Database Table */}
-          <DatabaseTable databases={databases} />
+          <DatabaseTable databases={databases} onAction={handleDatabaseAction} />
         </div>
       </main>
 
@@ -192,8 +276,26 @@ function App() {
         onClose={() => setIsModalOpen(false)}
         title="Create Database"
       >
-        <DatabaseForm onClose={() => setIsModalOpen(false)} />
+        <DatabaseForm onSubmit={handleCreateDatabase} onClose={() => setIsModalOpen(false)} />
       </Modal>
+
+      {/* Provisioning Progress Modal */}
+      <ProvisioningModal
+        isOpen={isProvisioningModalOpen}
+        databaseName={provisioningDatabaseName}
+        onComplete={() => setIsProvisioningModalOpen(false)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDatabaseToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        databaseName={databaseToDelete?.name}
+      />
     </div>
   );
 }
