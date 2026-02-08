@@ -6,6 +6,7 @@ public record TerraformResult(
         boolean success,
         String connectionString,
         String containerId,
+        String password,
         String errorMessage,
         Path workingDirectory
 ) {}

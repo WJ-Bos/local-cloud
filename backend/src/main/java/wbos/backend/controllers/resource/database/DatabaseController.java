@@ -13,6 +13,7 @@ import wbos.backend.service.resource.database.DatabaseDetailsService;
 import wbos.backend.service.resource.database.DatabaseProvisionService;
 import wbos.backend.service.resource.database.DatabaseUpdateService;
 import wbos.backend.service.resource.database.DatabaseDestroyService;
+import wbos.backend.service.resource.database.DatabaseControlService;
 import wbos.backend.service.utlis.validation.RequestValidationService;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class DatabaseController {
     private final DatabaseDetailsService databaseDetailsService;
     private final DatabaseUpdateService databaseUpdateService;
     private final DatabaseDestroyService databaseDestroyService;
+    private final DatabaseControlService databaseControlService;
 
     /**
      * Creates a new PostgreSQL database instance
@@ -102,5 +104,29 @@ public class DatabaseController {
     public ResponseEntity<DatabaseResponseDto> destroyDatabase(@PathVariable Long id) {
         log.info("Received database destruction request for ID: {}", id);
         return databaseDestroyService.destroy(id);
+    }
+
+    /**
+     * Stops a running database container
+     *
+     * @param id The ID of the database to stop
+     * @return ResponseEntity with updated status
+     */
+    @PostMapping("/{id}/stop")
+    public ResponseEntity<DatabaseResponseDto> stopDatabase(@PathVariable Long id) {
+        log.info("Received database stop request for ID: {}", id);
+        return databaseControlService.stopDatabase(id);
+    }
+
+    /**
+     * Starts a stopped database container
+     *
+     * @param id The ID of the database to start
+     * @return ResponseEntity with updated status
+     */
+    @PostMapping("/{id}/start")
+    public ResponseEntity<DatabaseResponseDto> startDatabase(@PathVariable Long id) {
+        log.info("Received database start request for ID: {}", id);
+        return databaseControlService.startDatabase(id);
     }
 }

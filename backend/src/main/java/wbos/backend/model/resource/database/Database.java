@@ -39,6 +39,9 @@ public class Database {
     @Column(name = "connection_string")
     private String connectionString;
 
+    @Column(name = "encrypted_password")
+    private String encryptedPassword;
+
     @Column
     private Integer port;
 

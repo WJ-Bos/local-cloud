@@ -13,6 +13,7 @@ import wbos.backend.model.resource.database.Database;
 import wbos.backend.records.TerraformResult;
 import wbos.backend.repository.resource.database.DatabaseRepository;
 import wbos.backend.service.infrastructure.TerraformService;
+import wbos.backend.service.security.PasswordEncryptionService;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -23,6 +24,7 @@ public class DatabaseProvisionService {
 
     private final DatabaseRepository databaseRepository;
     private final TerraformService terraformService;
+    private final PasswordEncryptionService passwordEncryptionService;
 
     /**
      * Provisions a new PostgreSQL database
@@ -87,6 +89,11 @@ public class DatabaseProvisionService {
                         db.setConnectionString(result.connectionString());
                         db.setContainerId(result.containerId());
                         db.setStatus(DatabaseStatus.RUNNING);
+
+                        // Encrypt and store password
+                        String encryptedPassword = passwordEncryptionService.encrypt(result.password());
+                        db.setEncryptedPassword(encryptedPassword);
+
                         db.setTerraformStatePath(
                                 result.workingDirectory() != null
                                         ? result.workingDirectory().toString()
@@ -142,6 +149,16 @@ public class DatabaseProvisionService {
      * @return DatabaseResponseDto
      */
     private DatabaseResponseDto convertToDto(Database database) {
+        // Decrypt password if present
+        String decryptedPassword = null;
+        if (database.getEncryptedPassword() != null) {
+            try {
+                decryptedPassword = passwordEncryptionService.decrypt(database.getEncryptedPassword());
+            } catch (Exception e) {
+                log.warn("Failed to decrypt password for database: {}", database.getId());
+            }
+        }
+
         return DatabaseResponseDto.builder()
                 .id(database.getId())
                 .name(database.getName())
@@ -149,6 +166,7 @@ public class DatabaseProvisionService {
                 .status(database.getStatus().name())
                 .port(database.getPort())
                 .connectionString(database.getConnectionString())
+                .password(decryptedPassword)
                 .terraformStatePath(database.getTerraformStatePath())
                 .createdAt(database.getCreatedAt())
                 .updatedAt(database.getUpdatedAt())

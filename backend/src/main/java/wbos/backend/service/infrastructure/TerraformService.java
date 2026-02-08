@@ -53,14 +53,14 @@ public class TerraformService {
             // Execute terraform init
             log.info("Executing terraform init in: {}", workingDir);
             if (!executeTerraformCommand(workingDir, "init")) {
-                return new TerraformResult(false, null, null,
+                return new TerraformResult(false, null, null, null,
                         "Terraform init failed", workingDir);
             }
 
             // Execute terraform apply
             log.info("Executing terraform apply in: {}", workingDir);
             if (!executeTerraformCommand(workingDir, "apply", "-auto-approve")) {
-                return new TerraformResult(false, null, null,
+                return new TerraformResult(false, null, null, null,
                         "Terraform apply failed", workingDir);
             }
 
@@ -73,12 +73,12 @@ public class TerraformService {
             log.info("Successfully provisioned database: {} (container: {})",
                     dbName, containerId);
 
-            return new TerraformResult(true, connectionString, containerId,
+            return new TerraformResult(true, connectionString, containerId, password,
                     null, workingDir);
 
         } catch (Exception e) {
             log.error("Failed to provision database: {}", dbName, e);
-            return new TerraformResult(false, null, null,
+            return new TerraformResult(false, null, null, null,
                     e.getMessage(), null);
         }
     }

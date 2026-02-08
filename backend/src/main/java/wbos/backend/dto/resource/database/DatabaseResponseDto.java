@@ -19,6 +19,7 @@ public class DatabaseResponseDto {
     private String status;
     private Integer port;
     private String connectionString;
+    private String password;
     private String terraformStatePath;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
