@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import wbos.backend.enums.DatabaseType;
 
 import java.time.LocalDateTime;
 
@@ -15,6 +16,7 @@ public class DatabaseResponseDto {
 
     private Long id;
     private String name;
+    private DatabaseType type;
     private String containerId;
     private String status;
     private Integer port;

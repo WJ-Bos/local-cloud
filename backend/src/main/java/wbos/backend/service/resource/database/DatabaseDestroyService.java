@@ -113,6 +113,7 @@ public class DatabaseDestroyService {
         return DatabaseResponseDto.builder()
                 .id(database.getId())
                 .name(database.getName())
+                .type(database.getType())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

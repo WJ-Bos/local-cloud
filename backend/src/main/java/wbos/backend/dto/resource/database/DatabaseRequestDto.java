@@ -1,13 +1,11 @@
 package wbos.backend.dto.resource.database;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import wbos.backend.enums.DatabaseType;
 
 @Data
 @SuperBuilder
@@ -22,7 +20,10 @@ public abstract class DatabaseRequestDto {
     )
     private String name;
 
-    @Min(value = 5433, message = "Port must be at least 5433 (5432 is reserved for platform database)")
+    @NotNull(message = "Database type is required")
+    private DatabaseType type;
+
+    @Min(value = 1024, message = "Port must be at least 1024")
     @Max(value = 65535, message = "Port must be less than 65536")
     private Integer port;
 }

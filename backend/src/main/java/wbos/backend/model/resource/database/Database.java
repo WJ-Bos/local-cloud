@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import wbos.backend.enums.DatabaseStatus;
+import wbos.backend.enums.DatabaseType;
 
 import java.time.LocalDateTime;
 
@@ -25,6 +26,10 @@ public class Database {
 
     @Column(nullable = false, unique = true)
     private String name;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private DatabaseType type;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

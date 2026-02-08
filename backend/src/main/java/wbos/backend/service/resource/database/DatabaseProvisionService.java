@@ -9,9 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import wbos.backend.dto.resource.database.CreateDataBaseRequestDto;
 import wbos.backend.dto.resource.database.DatabaseResponseDto;
 import wbos.backend.enums.DatabaseStatus;
+import wbos.backend.enums.DatabaseType;
 import wbos.backend.model.resource.database.Database;
 import wbos.backend.records.TerraformResult;
 import wbos.backend.repository.resource.database.DatabaseRepository;
+import wbos.backend.service.infrastructure.DatabaseConfigProvider;
 import wbos.backend.service.infrastructure.TerraformService;
 import wbos.backend.service.security.PasswordEncryptionService;
 
@@ -25,6 +27,7 @@ public class DatabaseProvisionService {
     private final DatabaseRepository databaseRepository;
     private final TerraformService terraformService;
     private final PasswordEncryptionService passwordEncryptionService;
+    private final DatabaseConfigProvider configProvider;
 
     /**
      * Provisions a new PostgreSQL database
@@ -40,7 +43,7 @@ public class DatabaseProvisionService {
             // Use provided port or find next available port
             Integer assignedPort = requestDto.getPort() != null
                     ? requestDto.getPort()
-                    : findNextAvailablePort();
+                    : findNextAvailablePort(requestDto.getType());
 
             log.info("Assigned port {} to database {} (user-provided: {})",
                     assignedPort,
@@ -50,6 +53,7 @@ public class DatabaseProvisionService {
             // Create database entity with PROVISIONING status
             Database database = Database.builder()
                     .name(requestDto.getName())
+                    .type(requestDto.getType())
                     .status(DatabaseStatus.PROVISIONING)
                     .port(assignedPort)
                     .terraformStatePath(String.format("/tmp/terraform/%s", requestDto.getName()))
@@ -65,15 +69,17 @@ public class DatabaseProvisionService {
             // Execute Terraform provisioning asynchronously
             final Long dbId = savedDatabase.getId();
             final String dbName = savedDatabase.getName();
+            final DatabaseType dbType = savedDatabase.getType();
             final Integer dbPort = savedDatabase.getPort();
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    log.info("Starting async Terraform provisioning for: {}", dbName);
+                    log.info("Starting async Terraform provisioning for: {} (type: {})", dbName, dbType);
 
                     // Execute Terraform
-                    TerraformResult result = terraformService.provisionPostgres(
+                    TerraformResult result = terraformService.provisionDatabase(
                             dbName,
+                            dbType,
                             dbPort
                     );
 
@@ -133,13 +139,27 @@ public class DatabaseProvisionService {
 
     /**
      * Finds the next available port for a new database
-     * Starts from 5433 (5432 is reserved for platform DB)
+     * Uses type-specific default port as starting point
      *
+     * @param type The database type
      * @return Next available port number
      */
-    private Integer findNextAvailablePort() {
+    private Integer findNextAvailablePort(DatabaseType type) {
+        Integer defaultPort = configProvider.getDefaultStartPort(type);
         Integer maxPort = databaseRepository.findMaxPort();
-        return (maxPort == null || maxPort == 5432) ? 5433 : maxPort + 1;
+
+        // If no databases exist, use the default port for this type
+        if (maxPort == null) {
+            return defaultPort;
+        }
+
+        // If max port is less than default, use default
+        if (maxPort < defaultPort) {
+            return defaultPort;
+        }
+
+        // Otherwise, increment from max port
+        return maxPort + 1;
     }
 
     /**
@@ -162,6 +182,7 @@ public class DatabaseProvisionService {
         return DatabaseResponseDto.builder()
                 .id(database.getId())
                 .name(database.getName())
+                .type(database.getType())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

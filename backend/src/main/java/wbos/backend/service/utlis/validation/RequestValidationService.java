@@ -194,9 +194,9 @@ public class RequestValidationService {
 
         Database database = databaseOpt.get();
 
-        // Check if database is in RUNNING state (only running databases can be updated)
-        if (database.getStatus() != DatabaseStatus.RUNNING) {
-            log.error("Database '{}' (ID: {}) cannot be updated - must be in RUNNING state but is in '{}' state",
+        // Check if database is in STOPPED state (only stopped databases can be updated)
+        if (database.getStatus() != DatabaseStatus.STOPPED) {
+            log.error("Database '{}' (ID: {}) cannot be updated - must be in STOPPED state but is in '{}' state",
                     database.getName(), database.getId(), database.getStatus());
             return false;
         }
@@ -237,7 +237,9 @@ public class RequestValidationService {
             log.info("Port change detected for database '{}': {} -> {}",
                     database.getName(), database.getPort(), requestDto.getPort());
 
-            if (!validatePort(requestDto.getPort())) {
+            // For updates, we need to check if the new port is in use by a DIFFERENT database
+            // The current database's port doesn't matter since it will be freed during update
+            if (!validatePortForUpdate(requestDto.getPort(), database.getId())) {
                 return false;
             }
 
@@ -348,6 +350,40 @@ public class RequestValidationService {
         if (databaseRepository.isPortInUse(port)) {
             log.error("Port {} is already in use by another database in PROVISIONING or RUNNING state", port);
             return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Validates port number for database updates
+     * Similar to validatePort but excludes the current database being updated
+     *
+     * @param port The port number to validate
+     * @param currentDatabaseId The ID of the database being updated
+     * @return true if port is valid and available, false otherwise
+     */
+    private boolean validatePortForUpdate(Integer port, Long currentDatabaseId) {
+        // Check port range
+        if (port < 5433 || port > 65535) {
+            log.error("Port {} is out of valid range. Must be between 5433 and 65535 (5432 is reserved)", port);
+            return false;
+        }
+
+        // Check if port is in use by a DIFFERENT database
+        Optional<Database> dbOnPort = databaseRepository.findByPort(port);
+        if (dbOnPort.isPresent() && !dbOnPort.get().getId().equals(currentDatabaseId)) {
+            Database conflictingDb = dbOnPort.get();
+            // Check if the conflicting database is in an active state
+            if (conflictingDb.getStatus() == DatabaseStatus.PROVISIONING ||
+                conflictingDb.getStatus() == DatabaseStatus.RUNNING ||
+                conflictingDb.getStatus() == DatabaseStatus.STARTING ||
+                conflictingDb.getStatus() == DatabaseStatus.UPDATING ||
+                conflictingDb.getStatus() == DatabaseStatus.STOPPING) {
+                log.error("Port {} is already in use by database '{}' (ID: {}) in '{}' state",
+                        port, conflictingDb.getName(), conflictingDb.getId(), conflictingDb.getStatus());
+                return false;
+            }
         }
 
         return true;

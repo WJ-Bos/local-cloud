@@ -1,7 +1,9 @@
 package wbos.backend.service.infrastructure;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import wbos.backend.enums.DatabaseType;
 import wbos.backend.records.TerraformResult;
 
 import java.io.BufferedReader;
@@ -18,22 +20,26 @@ import java.util.Map;
  * Service for managing Terraform operations
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class TerraformService {
+
+    private final DatabaseConfigProvider configProvider;
 
     private static final String TERRAFORM_BASE_DIR = "/tmp/terraform";
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int PASSWORD_LENGTH = 24;
 
     /**
-     * Provisions a PostgreSQL database using Terraform
+     * Provisions a database using Terraform
      *
      * @param dbName Database name
+     * @param type Database type
      * @param port External port
      * @return TerraformResult with connection details
      */
-    public TerraformResult provisionPostgres(String dbName, Integer port) {
-        log.info("Starting Terraform provisioning for database: {}", dbName);
+    public TerraformResult provisionDatabase(String dbName, DatabaseType type, Integer port) {
+        log.info("Starting Terraform provisioning for database: {} (type: {})", dbName, type);
 
         try {
             // Create working directory
@@ -43,12 +49,12 @@ public class TerraformService {
             // Generate secure password
             String password = generateSecurePassword();
 
-            // Generate Terraform configuration
-            String terraformConfig = generatePostgresTerraformConfig(dbName, port, password);
+            // Generate Terraform configuration using config provider
+            String terraformConfig = configProvider.generateTerraformConfig(type, dbName, port, password);
             Path mainTfPath = workingDir.resolve("main.tf");
             Files.writeString(mainTfPath, terraformConfig);
 
-            log.info("Generated Terraform config at: {}", mainTfPath);
+            log.info("Generated {} Terraform config at: {}", type, mainTfPath);
 
             // Execute terraform init
             log.info("Executing terraform init in: {}", workingDir);
@@ -67,17 +73,17 @@ public class TerraformService {
             // Extract outputs
             Map<String, String> outputs = extractTerraformOutputs(workingDir);
             String connectionString = outputs.getOrDefault("connection_string",
-                    buildConnectionString(dbName, port, password));
+                    configProvider.generateConnectionString(type, dbName, port, password));
             String containerId = outputs.get("container_id");
 
-            log.info("Successfully provisioned database: {} (container: {})",
-                    dbName, containerId);
+            log.info("Successfully provisioned {} database: {} (container: {})",
+                    type, dbName, containerId);
 
             return new TerraformResult(true, connectionString, containerId, password,
                     null, workingDir);
 
         } catch (Exception e) {
-            log.error("Failed to provision database: {}", dbName, e);
+            log.error("Failed to provision {} database: {}", type, dbName, e);
             return new TerraformResult(false, null, null, null,
                     e.getMessage(), null);
         }
@@ -115,52 +121,6 @@ public class TerraformService {
             log.error("Failed to destroy database at: {}", workingDir, e);
             return false;
         }
-    }
-
-    /**
-     * Generates Terraform HCL configuration for PostgreSQL
-     */
-    private String generatePostgresTerraformConfig(String dbName, Integer port, String password) {
-        return String.format("""
-                terraform {
-                  required_providers {
-                    docker = {
-                      source  = "kreuzwerker/docker"
-                      version = "~> 3.0"
-                    }
-                  }
-                }
-
-                provider "docker" {
-                  host = "unix:///var/run/docker.sock"
-                }
-
-                resource "docker_container" "postgres" {
-                  name  = "%s"
-                  image = "postgres:15-alpine"
-
-                  env = [
-                    "POSTGRES_DB=%s",
-                    "POSTGRES_USER=postgres",
-                    "POSTGRES_PASSWORD=%s"
-                  ]
-
-                  ports {
-                    internal = 5432
-                    external = %d
-                  }
-
-                  restart = "unless-stopped"
-                }
-
-                output "connection_string" {
-                  value = "postgresql://postgres:%s@localhost:%d/%s"
-                }
-
-                output "container_id" {
-                  value = docker_container.postgres.id
-                }
-                """, dbName, dbName, password, port, password, port, dbName);
     }
 
     /**
@@ -259,14 +219,6 @@ public class TerraformService {
     }
 
     /**
-     * Builds connection string manually
-     */
-    private String buildConnectionString(String dbName, Integer port, String password) {
-        return String.format("postgresql://postgres:%s@localhost:%d/%s",
-                password, port, dbName);
-    }
-
-    /**
      * Generates a secure random password
      */
     private String generateSecurePassword() {
@@ -278,6 +230,78 @@ public class TerraformService {
         }
 
         return password.toString();
+    }
+
+    /**
+     * Updates a database using Terraform
+     * This destroys the old infrastructure and recreates it with new configuration
+     *
+     * @param oldName Old database name
+     * @param newName New database name (can be same as oldName)
+     * @param type Database type
+     * @param newPort New port number
+     * @param existingPassword Existing password to preserve
+     * @param oldWorkingDir Old Terraform working directory
+     * @return TerraformResult with new connection details
+     */
+    public TerraformResult updateDatabase(String oldName, String newName, DatabaseType type,
+                                          Integer newPort, String existingPassword, Path oldWorkingDir) {
+        log.info("Starting Terraform update for {} database: {} -> {} (port: {})",
+                type, oldName, newName, newPort);
+
+        try {
+            // Step 1: Destroy old infrastructure if it exists
+            if (Files.exists(oldWorkingDir)) {
+                log.info("Destroying old infrastructure at: {}", oldWorkingDir);
+                if (!executeTerraformCommand(oldWorkingDir, "destroy", "-auto-approve")) {
+                    log.warn("Failed to destroy old infrastructure, continuing with update...");
+                }
+                // Delete old directory
+                deleteDirectory(oldWorkingDir);
+            }
+
+            // Step 2: Create new working directory with new name
+            Path newWorkingDir = Paths.get(TERRAFORM_BASE_DIR, newName);
+            Files.createDirectories(newWorkingDir);
+
+            // Step 3: Generate new Terraform configuration with existing password
+            String terraformConfig = configProvider.generateTerraformConfig(type, newName, newPort, existingPassword);
+            Path mainTfPath = newWorkingDir.resolve("main.tf");
+            Files.writeString(mainTfPath, terraformConfig);
+
+            log.info("Generated updated {} Terraform config at: {}", type, mainTfPath);
+
+            // Step 4: Execute terraform init
+            log.info("Executing terraform init in: {}", newWorkingDir);
+            if (!executeTerraformCommand(newWorkingDir, "init")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform init failed during update", newWorkingDir);
+            }
+
+            // Step 5: Execute terraform apply
+            log.info("Executing terraform apply in: {}", newWorkingDir);
+            if (!executeTerraformCommand(newWorkingDir, "apply", "-auto-approve")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform apply failed during update", newWorkingDir);
+            }
+
+            // Step 6: Extract outputs
+            Map<String, String> outputs = extractTerraformOutputs(newWorkingDir);
+            String connectionString = outputs.getOrDefault("connection_string",
+                    configProvider.generateConnectionString(type, newName, newPort, existingPassword));
+            String containerId = outputs.get("container_id");
+
+            log.info("Successfully updated {} database: {} -> {} (container: {})",
+                    type, oldName, newName, containerId);
+
+            return new TerraformResult(true, connectionString, containerId, existingPassword,
+                    null, newWorkingDir);
+
+        } catch (Exception e) {
+            log.error("Failed to update database: {} -> {}", oldName, newName, e);
+            return new TerraformResult(false, null, null, null,
+                    e.getMessage(), null);
+        }
     }
 
     /**
