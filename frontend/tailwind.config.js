@@ -6,6 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Outfit', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
       colors: {
         primary: {
           dark: '#0F1419',
@@ -29,6 +33,16 @@ export default {
             900: '#1A1A1A',
           },
         },
+      },
+      boxShadow: {
+        'island': '0 4px 24px rgba(0,0,0,0.6), 0 20px 64px rgba(0,0,0,0.5), 0 48px 120px rgba(0,0,0,0.35)',
+        'island-sm': '0 2px 12px rgba(0,0,0,0.55), 0 8px 36px rgba(0,0,0,0.45)',
+      },
+      backgroundImage: {
+        'dot-grid': 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
+      },
+      backgroundSize: {
+        'dot-grid': '28px 28px',
       },
     },
   },

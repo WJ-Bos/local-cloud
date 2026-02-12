@@ -6,6 +6,7 @@ import DatabaseTable from './components/DatabaseTable';
 import ProvisioningModal from './components/ProvisioningModal';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import UpdateDatabaseModal from './components/UpdateDatabaseModal';
+import DatabaseConsoleModal from './components/DatabaseConsoleModal';
 import { DATABASE_TYPES } from './components/DatabaseTypeSelector';
 import databaseService from './services/databaseService';
 
@@ -14,18 +15,18 @@ function App() {
   const [isProvisioningModalOpen, setIsProvisioningModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isTerminalModalOpen, setIsTerminalModalOpen] = useState(false);
   const [databaseToDelete, setDatabaseToDelete] = useState(null);
   const [databaseToUpdate, setDatabaseToUpdate] = useState(null);
+  const [databaseForTerminal, setDatabaseForTerminal] = useState(null);
   const [provisioningDatabaseName, setProvisioningDatabaseName] = useState('');
   const [databases, setDatabases] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch databases on mount
   useEffect(() => {
     fetchDatabases();
   }, []);
 
-  // Poll for active operations (PROVISIONING, DESTROYING, STARTING, STOPPING, UPDATING)
   useEffect(() => {
     const hasActiveOperation = databases.some(
       db => ['PROVISIONING', 'DESTROYING', 'STARTING', 'STOPPING', 'UPDATING'].includes(db.status)
@@ -34,7 +35,7 @@ function App() {
 
     const pollInterval = setInterval(() => {
       fetchDatabases();
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 
     return () => clearInterval(pollInterval);
   }, [databases]);
@@ -45,7 +46,6 @@ function App() {
       setDatabases(data);
       setLoading(false);
 
-      // Close provisioning modal if database is no longer provisioning
       if (isProvisioningModalOpen) {
         const provisioningDb = data.find(
           db => db.name === provisioningDatabaseName && db.status !== 'PROVISIONING'
@@ -114,7 +114,6 @@ function App() {
       try {
         toast.loading(`Restarting ${database.name}...`, { id: 'restart' });
         await databaseService.stopDatabase(database.id);
-        // Wait a moment before starting
         setTimeout(async () => {
           await databaseService.startDatabase(database.id);
           toast.success(`Database "${database.name}" is restarting!`, { id: 'restart' });
@@ -127,12 +126,14 @@ function App() {
     } else if (action === 'update') {
       setDatabaseToUpdate(database);
       setIsUpdateModalOpen(true);
+    } else if (action === 'terminal') {
+      setDatabaseForTerminal(database);
+      setIsTerminalModalOpen(true);
     }
   };
 
   const confirmDelete = async () => {
     if (!databaseToDelete) return;
-
     try {
       setIsDeleteModalOpen(false);
       toast.loading(`Deleting ${databaseToDelete.name}...`, { id: 'delete' });
@@ -157,217 +158,208 @@ function App() {
     } catch (error) {
       console.error('Failed to update database:', error);
       toast.error(error.response?.data?.message || 'Failed to update database', { id: 'update' });
-      throw error; // Re-throw to let the modal handle it
+      throw error;
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#0A0A0B]">
-      <Toaster position="top-right" />
+  const runningCount      = databases.filter(db => db.status === 'RUNNING').length;
+  const provisioningCount = databases.filter(db => db.status === 'PROVISIONING').length;
+  const inactiveCount     = databases.filter(db => db.status === 'STOPPED' || db.status === 'FAILED').length;
 
-      {/* Professional Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-[#111113]/80 backdrop-blur-xl border-b border-white/[0.08]">
-        <div className="max-w-[1800px] mx-auto px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo & Brand */}
-            <div className="flex items-center gap-8">
+  return (
+    <div className="min-h-screen bg-[#05060f] dot-bg font-sans">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#0f1024',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.08)',
+            fontFamily: 'Outfit, sans-serif',
+            fontSize: '13px',
+          },
+        }}
+      />
+
+      {/* ── Navigation ──────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-40">
+        <div className="mx-auto max-w-[1800px] px-6 py-3">
+          <div className="island rounded-2xl px-5 flex items-center justify-between h-14">
+            {/* Brand */}
+            <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                   </svg>
                 </div>
-                <span className="text-white font-semibold text-base tracking-tight">Cloud Control</span>
+                <span className="text-white font-semibold text-sm tracking-tight">Cloud Control</span>
               </div>
 
-              {/* Navigation Links */}
-              <div className="hidden md:flex items-center gap-1">
-                <button className="px-3 py-1.5 text-sm font-medium text-primary-gray-400 hover:text-white transition-colors">
-                  Overview
-                </button>
-                <button className="px-3 py-1.5 text-sm font-medium text-white bg-white/[0.06] rounded-md">
-                  Databases
-                </button>
-                <button className="px-3 py-1.5 text-sm font-medium text-primary-gray-400 hover:text-white transition-colors">
-                  Compute
-                </button>
-                <button className="px-3 py-1.5 text-sm font-medium text-primary-gray-400 hover:text-white transition-colors">
+              <div className="hidden md:flex items-center">
+                <span className="px-3 py-1 text-xs font-medium text-white bg-white/[0.08] rounded-lg border border-white/[0.1]">
                   Storage
-                </button>
+                </span>
               </div>
             </div>
 
-            {/* Right Section */}
+            {/* Status + refresh */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-emerald-500/10 rounded-md border border-emerald-500/20">
-                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06]">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full running-dot block" />
                 <span className="text-xs font-medium text-emerald-400">Operational</span>
               </div>
-              <button className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white/[0.06] transition-colors">
-                <svg className="w-4 h-4 text-primary-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              <button
+                onClick={handleResync}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06] transition-colors text-primary-gray-500 hover:text-white"
+                title="Refresh"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-md flex items-center justify-center text-xs font-semibold text-white">
-                JD
-              </div>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content Area */}
-      <main className="max-w-[1800px] mx-auto px-8 py-8">
-        {/* Page Header with Actions */}
-        <div className="flex items-center justify-between mb-8">
+      {/* ── Main ────────────────────────────────────────────────────── */}
+      <main className="mx-auto max-w-[1800px] px-6 pb-12 pt-6">
+
+        {/* Page header */}
+        <div className="flex items-end justify-between mb-7">
           <div>
-            <h1 className="text-2xl font-semibold text-white mb-1 tracking-tight">Database Management</h1>
-            <p className="text-sm text-primary-gray-500">
-              Provision and manage database instances across your infrastructure
+            <h1 className="text-2xl font-semibold text-white tracking-tight leading-none mb-1.5">
+              Database Management
+            </h1>
+            <p className="text-sm text-primary-gray-600">
+              Provision and manage database instances running in Docker
             </p>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleResync}
-              className="inline-flex items-center gap-2 px-4 h-9 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sm font-medium text-white rounded-lg transition-all"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-5 h-9 bg-white hover:bg-white/90 text-sm font-medium text-black rounded-lg transition-all shadow-lg shadow-white/10"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Create Database
-            </button>
-          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 h-9 bg-white hover:bg-white/90 text-black text-sm font-semibold rounded-xl transition-all shadow-lg shadow-white/[0.08]"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            New Database
+          </button>
         </div>
 
-        {/* Stats Overview Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-          {/* Database Types - Spans 2 columns */}
-          <div className="lg:col-span-2 bg-[#111113] border border-white/[0.08] rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-white">Database Types</h3>
-              <span className="text-xl font-semibold text-white">{databases.length}</span>
-            </div>
-            <div className="space-y-3">
-              {DATABASE_TYPES.map(type => {
-                const count = databases.filter(db => db.type === type.id).length;
-                if (count === 0) return null;
-                return (
-                  <div key={type.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-7 h-7 rounded-lg ${type.bgColor} flex items-center justify-center p-1`}>
-                        <img src={type.logo} alt={type.name} className="w-full h-full object-contain" />
-                      </div>
-                      <span className="text-sm text-primary-gray-400 group-hover:text-white transition-colors">{type.name}</span>
-                    </div>
-                    <span className="text-sm font-medium text-white">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* ── Stats row ──────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
 
           {/* Total */}
-          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-5">
-            <p className="text-xs font-medium text-primary-gray-500 mb-3">TOTAL</p>
-            <p className="text-3xl font-semibold text-white mb-1">{databases.length}</p>
+          <div className="island-sm rounded-2xl p-5">
+            <p className="text-[11px] font-semibold text-primary-gray-600 uppercase tracking-widest mb-3">Total</p>
+            <p className="text-4xl font-semibold text-white leading-none mb-2">{databases.length}</p>
             <p className="text-xs text-primary-gray-600">instances</p>
           </div>
 
           {/* Running */}
-          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-5">
-            <p className="text-xs font-medium text-primary-gray-500 mb-3">RUNNING</p>
-            <p className="text-3xl font-semibold text-emerald-400 mb-1">
-              {databases.filter(db => db.status === 'RUNNING').length}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1 h-1 bg-emerald-400 rounded-full"></div>
-              <p className="text-xs text-primary-gray-600">healthy</p>
+          <div className="island-sm glow-emerald rounded-2xl p-5">
+            <p className="text-[11px] font-semibold text-primary-gray-600 uppercase tracking-widest mb-3">Running</p>
+            <div className="flex items-end gap-2 mb-2">
+              <p className="text-4xl font-semibold text-emerald-400 leading-none">{runningCount}</p>
+              {runningCount > 0 && (
+                <span className="w-2 h-2 mb-1 bg-emerald-400 rounded-full running-dot block" />
+              )}
             </div>
+            <p className="text-xs text-emerald-500/60">healthy</p>
           </div>
 
           {/* Provisioning */}
-          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-5">
-            <p className="text-xs font-medium text-primary-gray-500 mb-3">PROVISIONING</p>
-            <p className="text-3xl font-semibold text-sky-400 mb-1">
-              {databases.filter(db => db.status === 'PROVISIONING').length}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1 h-1 bg-sky-400 rounded-full animate-pulse"></div>
-              <p className="text-xs text-primary-gray-600">starting</p>
+          <div className="island-sm glow-sky rounded-2xl p-5">
+            <p className="text-[11px] font-semibold text-primary-gray-600 uppercase tracking-widest mb-3">Provisioning</p>
+            <div className="flex items-end gap-2 mb-2">
+              <p className="text-4xl font-semibold text-sky-400 leading-none">{provisioningCount}</p>
+              {provisioningCount > 0 && (
+                <span className="w-2 h-2 mb-1 bg-sky-400 rounded-full animate-pulse block" />
+              )}
             </div>
+            <p className="text-xs text-sky-500/60">starting up</p>
           </div>
 
-          {/* Stopped/Failed Combined */}
-          <div className="bg-[#111113] border border-white/[0.08] rounded-xl p-5">
-            <p className="text-xs font-medium text-primary-gray-500 mb-3">INACTIVE</p>
-            <p className="text-3xl font-semibold text-primary-gray-500 mb-1">
-              {databases.filter(db => db.status === 'STOPPED' || db.status === 'FAILED').length}
+          {/* Inactive */}
+          <div className={`island-sm rounded-2xl p-5 ${inactiveCount > 0 ? 'glow-amber' : ''}`}>
+            <p className="text-[11px] font-semibold text-primary-gray-600 uppercase tracking-widest mb-3">Inactive</p>
+            <p className={`text-4xl font-semibold leading-none mb-2 ${inactiveCount > 0 ? 'text-amber-400' : 'text-primary-gray-600'}`}>
+              {inactiveCount}
             </p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1 h-1 bg-primary-gray-500 rounded-full"></div>
-              <p className="text-xs text-primary-gray-600">
-                {databases.filter(db => db.status === 'FAILED').length > 0 ? 'requires attention' : 'stopped'}
-              </p>
-            </div>
+            <p className="text-xs text-primary-gray-600">
+              {databases.filter(db => db.status === 'FAILED').length > 0 ? 'needs attention' : 'stopped'}
+            </p>
           </div>
         </div>
 
-        {/* Database Table Container */}
-        <div className="bg-[#111113] border border-white/[0.08] rounded-xl overflow-hidden">
-          <div className="max-h-[calc(100vh-400px)] overflow-y-auto custom-scrollbar">
-            <DatabaseTable databases={databases} onAction={handleDatabaseAction} />
+        {/* DB type breakdown — only show if any types exist */}
+        {databases.length > 0 && (
+          <div className="island-sm rounded-2xl px-5 py-4 mb-5 flex items-center gap-6 flex-wrap">
+            <span className="text-[11px] font-semibold text-primary-gray-600 uppercase tracking-widest">Types</span>
+            {DATABASE_TYPES.map(type => {
+              const count = databases.filter(db => db.type === type.id).length;
+              if (count === 0) return null;
+              return (
+                <div key={type.id} className="flex items-center gap-2">
+                  <div className={`w-5 h-5 rounded-md ${type.bgColor} flex items-center justify-center p-0.5 flex-shrink-0`}>
+                    <img src={type.logo} alt={type.name} className="w-full h-full object-contain" />
+                  </div>
+                  <span className="text-xs text-primary-gray-400">{type.name}</span>
+                  <span className="text-xs font-semibold text-white">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Database table island ───────────────────────────────────── */}
+        <div className="island rounded-2xl overflow-hidden">
+          <div className="max-h-[calc(100vh-380px)] overflow-y-auto custom-scrollbar">
+            {loading ? (
+              <div className="py-20 flex flex-col items-center gap-3">
+                <svg className="w-5 h-5 text-primary-gray-600 spin-slow" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                <span className="text-xs text-primary-gray-600">Loading databases…</span>
+              </div>
+            ) : (
+              <DatabaseTable databases={databases} onAction={handleDatabaseAction} />
+            )}
           </div>
         </div>
       </main>
 
-      {/* Create Database Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Create Database"
-      >
+      {/* ── Modals ──────────────────────────────────────────────────── */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Database">
         <DatabaseForm onSubmit={handleCreateDatabase} onClose={() => setIsModalOpen(false)} />
       </Modal>
 
-      {/* Provisioning Progress Modal */}
       <ProvisioningModal
         isOpen={isProvisioningModalOpen}
         databaseName={provisioningDatabaseName}
         onComplete={() => setIsProvisioningModalOpen(false)}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setDatabaseToDelete(null);
-        }}
+        onClose={() => { setIsDeleteModalOpen(false); setDatabaseToDelete(null); }}
         onConfirm={confirmDelete}
         databaseName={databaseToDelete?.name}
       />
 
-      {/* Update Database Modal */}
       <UpdateDatabaseModal
         isOpen={isUpdateModalOpen}
-        onClose={() => {
-          setIsUpdateModalOpen(false);
-          setDatabaseToUpdate(null);
-        }}
+        onClose={() => { setIsUpdateModalOpen(false); setDatabaseToUpdate(null); }}
         database={databaseToUpdate}
         onSubmit={handleUpdateDatabase}
+      />
+
+      <DatabaseConsoleModal
+        isOpen={isTerminalModalOpen}
+        onClose={() => { setIsTerminalModalOpen(false); setDatabaseForTerminal(null); }}
+        database={databaseForTerminal}
       />
     </div>
   );

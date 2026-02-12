@@ -54,6 +54,18 @@ const databaseService = {
     const response = await api.post(`/databases/${id}/start`);
     return response.data;
   },
+
+  getConsoleLogs: async (id, tail = 100, filter = '') => {
+    const params = { tail };
+    if (filter) params.filter = filter;
+    const response = await api.get(`/databases/${id}/logs`, { params });
+    return response.data;
+  },
+
+  getConsoleInspect: async (id) => {
+    const response = await api.get(`/databases/${id}/inspect`);
+    return response.data;
+  },
 };
 
 export default databaseService;
