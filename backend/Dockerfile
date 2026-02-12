@@ -5,15 +5,16 @@ FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (cached layer)
+# Copy root POM first (parent for the backend module)
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
 
-# Copy source code
-COPY src ./src
+# Copy backend POM and download dependencies (cached layer)
+COPY backend/pom.xml backend/
+RUN mvn -pl backend dependency:go-offline -B
 
-# Build the application (skip tests for faster builds)
-RUN mvn clean package -DskipTests
+# Copy source code and build
+COPY backend/src backend/src
+RUN mvn -pl backend clean package -DskipTests
 
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
@@ -31,7 +32,7 @@ RUN apk add --no-cache curl unzip docker-cli && \
     docker --version
 
 # Copy the built JAR from builder stage
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/backend/target/*.jar app.jar
 
 # Expose port
 EXPOSE 8080

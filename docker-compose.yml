@@ -24,8 +24,8 @@ services:
   # Spring Boot Backend
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: control-plane-backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/control_plane
@@ -33,6 +33,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: control_plane
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SERVER_PORT: 8080
+      APP_DOCKER_HOST: unix:///var/run/docker.sock
     ports:
       - "8080:8080"
     volumes:

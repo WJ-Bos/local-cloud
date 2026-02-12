@@ -24,6 +24,8 @@ server:
 
 # Application-specific configuration
 app:
+  docker:
+    host: "npipe:////./pipe/docker_engine"  # Windows Docker Desktop default; override via APP_DOCKER_HOST env var
   cors:
     allowed-origins:
       - http://localhost:5173  # Vite dev server
