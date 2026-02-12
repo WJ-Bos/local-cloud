@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UpdateDatabaseRequestDto extends DatabaseRequestDto{
+public class UpdateDatabaseRequestDto {
 
     @NotBlank(message = "Database name is required to identify which database to update")
     @Pattern(

@@ -86,7 +86,7 @@ public class DatabaseController {
         }
 
         // Validate the update request
-        if (!requestValidationService.validateDbRequest("UPDATE", updateRequestDto)) {
+        if (!requestValidationService.validateUpdateRequest(updateRequestDto)) {
             log.warn("Validation failed for database update: {}", name);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }

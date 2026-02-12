@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import wbos.backend.dto.resource.database.DatabaseRequestDto;
+import wbos.backend.dto.resource.database.UpdateDatabaseRequestDto;
 import wbos.backend.enums.DatabaseStatus;
 import wbos.backend.model.resource.database.Database;
 import wbos.backend.repository.resource.database.DatabaseRepository;
@@ -42,7 +43,6 @@ public class RequestValidationService {
                 String name = requestDto != null ? requestDto.getName() : null;
                 yield validateDeleteRequest(name);
             }
-            case "UPDATE" -> validateUpdateRequest(requestDto);
             case "GET" -> {
                 String name = requestDto != null ? requestDto.getName() : null;
                 yield validateGetRequest(name);
@@ -163,30 +163,26 @@ public class RequestValidationService {
      * Checks:
      * - Database name is provided and valid format
      * - Database exists with given name
-     * - Database is in RUNNING state (only running databases can be updated)
+     * - Database is in STOPPED state (only stopped databases can be updated)
      * - If newName is provided, validate it's not already in use (unless DESTROYED)
      * - If port is being changed, validate the new port
-     * - At least one field (newName or port) must be different from current values
      *
-     * @param requestDto The database update request (must be UpdateDatabaseRequestDto)
+     * @param requestDto The database update request
      * @return true if validation passes, false otherwise
      */
-    public boolean validateUpdateRequest(DatabaseRequestDto requestDto) {
+    public boolean validateUpdateRequest(UpdateDatabaseRequestDto requestDto) {
         log.info("Validating UPDATE request for database: '{}'",
                 requestDto != null ? requestDto.getName() : "null");
 
-        // Validate DTO is not null
         if (requestDto == null) {
             log.error("Request DTO cannot be null");
             return false;
         }
 
-        // Validate name is not blank
         if (!validateNameNotBlank(requestDto.getName())) {
             return false;
         }
 
-        // Find database by name
         Optional<Database> databaseOpt = findRequiredDatabase(requestDto.getName());
         if (databaseOpt.isEmpty()) {
             return false;
@@ -194,67 +190,33 @@ public class RequestValidationService {
 
         Database database = databaseOpt.get();
 
-        // Check if database is in STOPPED state (only stopped databases can be updated)
         if (database.getStatus() != DatabaseStatus.STOPPED) {
             log.error("Database '{}' (ID: {}) cannot be updated - must be in STOPPED state but is in '{}' state",
                     database.getName(), database.getId(), database.getStatus());
             return false;
         }
 
-        boolean hasChanges = false;
-
-        // Check if we have an UpdateDatabaseRequestDto with newName field
-        if (requestDto instanceof wbos.backend.dto.resource.database.UpdateDatabaseRequestDto updateDto) {
-            // Validate newName if provided and different from current name
-            if (updateDto.getNewName() != null && !updateDto.getNewName().equals(database.getName())) {
-                log.info("Name change detected for database '{}': '{}' -> '{}'",
-                        database.getName(), database.getName(), updateDto.getNewName());
-
-                // Validate new name format
-                if (!validateNameFormat(updateDto.getNewName())) {
-                    return false;
-                }
-
-                // Check if new name is already in use by a non-DESTROYED database
-                Optional<Database> existingDb = databaseRepository.findByName(updateDto.getNewName());
-                if (existingDb.isPresent() && existingDb.get().getStatus() != DatabaseStatus.DESTROYED) {
-                    log.error("Database with name '{}' already exists and is in '{}' state",
-                            updateDto.getNewName(), existingDb.get().getStatus());
-                    return false;
-                }
-
-                if (existingDb.isPresent()) {
-                    log.info("Database name '{}' was previously used but is now DESTROYED - name can be reused",
-                            updateDto.getNewName());
-                }
-
-                hasChanges = true;
-            }
-        }
-
-        // If port is being changed, validate the new port
-        if (requestDto.getPort() != null && !requestDto.getPort().equals(database.getPort())) {
-            log.info("Port change detected for database '{}': {} -> {}",
-                    database.getName(), database.getPort(), requestDto.getPort());
-
-            // For updates, we need to check if the new port is in use by a DIFFERENT database
-            // The current database's port doesn't matter since it will be freed during update
-            if (!validatePortForUpdate(requestDto.getPort(), database.getId())) {
+        if (requestDto.getNewName() != null && !requestDto.getNewName().equals(database.getName())) {
+            if (!validateNameFormat(requestDto.getNewName())) {
                 return false;
             }
 
-            hasChanges = true;
+            Optional<Database> existingDb = databaseRepository.findByName(requestDto.getNewName());
+            if (existingDb.isPresent() && existingDb.get().getStatus() != DatabaseStatus.DESTROYED) {
+                log.error("Database with name '{}' already exists and is in '{}' state",
+                        requestDto.getNewName(), existingDb.get().getStatus());
+                return false;
+            }
         }
 
-        // Ensure at least one field is being changed
-        if (!hasChanges) {
-            log.warn("No changes detected for database '{}' - newName and port are same as current values",
-                    database.getName());
-            // This is not an error, but we'll let the service handle it
+        if (requestDto.getPort() != null && !requestDto.getPort().equals(database.getPort())) {
+            if (!validatePortForUpdate(requestDto.getPort(), database.getId())) {
+                return false;
+            }
         }
 
-        log.info("UPDATE validation successful for database: '{}' (ID: {}, Status: {}, HasChanges: {})",
-                database.getName(), database.getId(), database.getStatus(), hasChanges);
+        log.info("UPDATE validation successful for database: '{}' (ID: {}, Status: {})",
+                database.getName(), database.getId(), database.getStatus());
         return true;
     }
 
