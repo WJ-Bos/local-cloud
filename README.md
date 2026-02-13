@@ -24,11 +24,16 @@ Docker commands required.
 
 ## Quick start
 
+```bash
+cd local-cloud
+docker compose up -d
+```
+
 **Prerequisites:** Docker Desktop running, Terraform installed and on PATH, Java 21+, Node 18+.
 
 ```bash
 git clone <repository-url>
-cd local-cloud-control-plane
+cd local-cloud
 ```
 
 Start the platform database (required by the backend):
