@@ -40,6 +40,15 @@ function App() {
     return () => clearInterval(pollInterval);
   }, [databases]);
 
+  // Keep the update modal's database in sync with live polling results
+  useEffect(() => {
+    if (!databaseToUpdate) return;
+    const latest = databases.find(db => db.id === databaseToUpdate.id);
+    if (latest && latest.status !== databaseToUpdate.status) {
+      setDatabaseToUpdate(latest);
+    }
+  }, [databases]);
+
   const fetchDatabases = async () => {
     try {
       const data = await databaseService.getAllDatabases();
@@ -144,6 +153,17 @@ function App() {
     } catch (error) {
       console.error('Failed to delete database:', error);
       toast.error(error.response?.data?.message || 'Failed to delete database', { id: 'delete' });
+    }
+  };
+
+  const handleStopForUpdate = async () => {
+    if (!databaseToUpdate) return;
+    try {
+      await databaseService.stopDatabase(databaseToUpdate.id);
+      fetchDatabases();
+    } catch (error) {
+      console.error('Failed to stop database:', error);
+      toast.error(error.response?.data?.message || 'Failed to stop database');
     }
   };
 
@@ -352,6 +372,7 @@ function App() {
       <UpdateDatabaseModal
         isOpen={isUpdateModalOpen}
         onClose={() => { setIsUpdateModalOpen(false); setDatabaseToUpdate(null); }}
+        onStop={handleStopForUpdate}
         database={databaseToUpdate}
         onSubmit={handleUpdateDatabase}
       />
