@@ -114,6 +114,7 @@ public class DatabaseDestroyService {
                 .id(database.getId())
                 .name(database.getName())
                 .type(database.getType())
+                .version(database.getVersion())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

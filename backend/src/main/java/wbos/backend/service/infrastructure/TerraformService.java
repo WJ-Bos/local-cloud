@@ -38,8 +38,8 @@ public class TerraformService {
      * @param port External port
      * @return TerraformResult with connection details
      */
-    public TerraformResult provisionDatabase(String dbName, DatabaseType type, Integer port) {
-        log.info("Starting Terraform provisioning for database: {} (type: {})", dbName, type);
+    public TerraformResult provisionDatabase(String dbName, DatabaseType type, Integer port, String version) {
+        log.info("Starting Terraform provisioning for database: {} (type: {}, version: {})", dbName, type, version);
 
         try {
             // Create working directory
@@ -50,7 +50,7 @@ public class TerraformService {
             String password = generateSecurePassword();
 
             // Generate Terraform configuration using config provider
-            String terraformConfig = configProvider.generateTerraformConfig(type, dbName, port, password);
+            String terraformConfig = configProvider.generateTerraformConfig(type, dbName, port, password, version);
             Path mainTfPath = workingDir.resolve("main.tf");
             Files.writeString(mainTfPath, terraformConfig);
 

@@ -26,4 +26,10 @@ public abstract class DatabaseRequestDto {
     @Min(value = 1024, message = "Port must be at least 1024")
     @Max(value = 65535, message = "Port must be less than 65536")
     private Integer port;
+
+    @Pattern(
+        regexp = "^[0-9][0-9a-zA-Z.-]*$",
+        message = "Version must be a valid tag (e.g. 15, 8.0, 7.2)"
+    )
+    private String version;
 }

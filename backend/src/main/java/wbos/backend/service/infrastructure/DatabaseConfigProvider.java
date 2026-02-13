@@ -21,14 +21,31 @@ public class DatabaseConfigProvider {
      * @return Terraform HCL configuration string
      */
     public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password) {
-        log.info("Generating Terraform config for type: {}", type);
+        return generateTerraformConfig(type, dbName, port, password, null);
+    }
+
+    public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version) {
+        log.info("Generating Terraform config for type: {} version: {}", type, version != null ? version : "default");
 
         return switch (type) {
-            case POSTGRESQL -> generatePostgresConfig(dbName, port, password);
-            case MYSQL -> generateMySQLConfig(dbName, port, password);
-            case MONGODB -> generateMongoDBConfig(dbName, port, password);
-            case REDIS -> generateRedisConfig(dbName, port, password);
-            case MARIADB -> generateMariaDBConfig(dbName, port, password);
+            case POSTGRESQL -> generatePostgresConfig(dbName, port, password, resolveVersion(type, version));
+            case MYSQL      -> generateMySQLConfig(dbName, port, password, resolveVersion(type, version));
+            case MONGODB    -> generateMongoDBConfig(dbName, port, password, resolveVersion(type, version));
+            case REDIS      -> generateRedisConfig(dbName, port, password, resolveVersion(type, version));
+            case MARIADB    -> generateMariaDBConfig(dbName, port, password, resolveVersion(type, version));
+        };
+    }
+
+    private String resolveVersion(DatabaseType type, String version) {
+        if (version != null && !version.isBlank()) {
+            return version;
+        }
+        return switch (type) {
+            case POSTGRESQL -> "15";
+            case MYSQL      -> "8.0";
+            case MONGODB    -> "7.0";
+            case REDIS      -> "7.2";
+            case MARIADB    -> "11.1";
         };
     }
 
@@ -69,7 +86,7 @@ public class DatabaseConfigProvider {
 
     // ==================== PostgreSQL Configuration ====================
 
-    private String generatePostgresConfig(String dbName, Integer port, String password) {
+    private String generatePostgresConfig(String dbName, Integer port, String password, String version) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -86,7 +103,7 @@ public class DatabaseConfigProvider {
 
                 resource "docker_container" "database" {
                   name  = "%s"
-                  image = "postgres:15-alpine"
+                  image = "postgres:%s"
 
                   env = [
                     "POSTGRES_DB=%s",
@@ -109,12 +126,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, dbName, password, port, password, port, dbName);
+                """, dbName, version, dbName, password, port, password, port, dbName);
     }
 
     // ==================== MySQL Configuration ====================
 
-    private String generateMySQLConfig(String dbName, Integer port, String password) {
+    private String generateMySQLConfig(String dbName, Integer port, String password, String version) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -131,7 +148,7 @@ public class DatabaseConfigProvider {
 
                 resource "docker_container" "database" {
                   name  = "%s"
-                  image = "mysql:8.0"
+                  image = "mysql:%s"
 
                   env = [
                     "MYSQL_ROOT_PASSWORD=%s",
@@ -153,12 +170,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, password, dbName, port, password, port, dbName);
+                """, dbName, version, password, dbName, port, password, port, dbName);
     }
 
     // ==================== MongoDB Configuration ====================
 
-    private String generateMongoDBConfig(String dbName, Integer port, String password) {
+    private String generateMongoDBConfig(String dbName, Integer port, String password, String version) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -175,7 +192,7 @@ public class DatabaseConfigProvider {
 
                 resource "docker_container" "database" {
                   name  = "%s"
-                  image = "mongo:7.0"
+                  image = "mongo:%s"
 
                   env = [
                     "MONGO_INITDB_ROOT_USERNAME=root",
@@ -198,12 +215,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, password, dbName, port, password, port, dbName);
+                """, dbName, version, password, dbName, port, password, port, dbName);
     }
 
     // ==================== Redis Configuration ====================
 
-    private String generateRedisConfig(String dbName, Integer port, String password) {
+    private String generateRedisConfig(String dbName, Integer port, String password, String version) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -220,7 +237,7 @@ public class DatabaseConfigProvider {
 
                 resource "docker_container" "database" {
                   name  = "%s"
-                  image = "redis:7.2-alpine"
+                  image = "redis:%s-alpine"
 
                   command = ["redis-server", "--requirepass", "%s"]
 
@@ -239,12 +256,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, password, port, password, port);
+                """, dbName, version, password, port, password, port);
     }
 
     // ==================== MariaDB Configuration ====================
 
-    private String generateMariaDBConfig(String dbName, Integer port, String password) {
+    private String generateMariaDBConfig(String dbName, Integer port, String password, String version) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -261,7 +278,7 @@ public class DatabaseConfigProvider {
 
                 resource "docker_container" "database" {
                   name  = "%s"
-                  image = "mariadb:11.1"
+                  image = "mariadb:%s"
 
                   env = [
                     "MARIADB_ROOT_PASSWORD=%s",
@@ -283,6 +300,6 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, password, dbName, port, password, port, dbName);
+                """, dbName, version, password, dbName, port, password, port, dbName);
     }
 }

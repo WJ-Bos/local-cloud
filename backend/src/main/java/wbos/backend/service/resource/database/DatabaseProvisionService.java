@@ -54,6 +54,7 @@ public class DatabaseProvisionService {
             Database database = Database.builder()
                     .name(requestDto.getName())
                     .type(requestDto.getType())
+                    .version(requestDto.getVersion())
                     .status(DatabaseStatus.PROVISIONING)
                     .port(assignedPort)
                     .terraformStatePath(String.format("/tmp/terraform/%s", requestDto.getName()))
@@ -71,16 +72,18 @@ public class DatabaseProvisionService {
             final String dbName = savedDatabase.getName();
             final DatabaseType dbType = savedDatabase.getType();
             final Integer dbPort = savedDatabase.getPort();
+            final String dbVersion = savedDatabase.getVersion();
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    log.info("Starting async Terraform provisioning for: {} (type: {})", dbName, dbType);
+                    log.info("Starting async Terraform provisioning for: {} (type: {}, version: {})", dbName, dbType, dbVersion);
 
                     // Execute Terraform
                     TerraformResult result = terraformService.provisionDatabase(
                             dbName,
                             dbType,
-                            dbPort
+                            dbPort,
+                            dbVersion
                     );
 
                     // Fetch database from repository
@@ -183,6 +186,7 @@ public class DatabaseProvisionService {
                 .id(database.getId())
                 .name(database.getName())
                 .type(database.getType())
+                .version(database.getVersion())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

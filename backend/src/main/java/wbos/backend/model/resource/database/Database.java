@@ -47,6 +47,9 @@ public class Database {
     @Column(name = "encrypted_password")
     private String encryptedPassword;
 
+    @Column(name = "version", length = 20)
+    private String version;
+
     @Column
     private Integer port;
 

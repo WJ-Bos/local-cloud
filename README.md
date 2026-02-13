@@ -1,97 +1,40 @@
 # Local Cloud Control Plane
 
-A learning-focused platform that mimics cloud infrastructure services (like AWS EC2/RDS) running entirely on local hardware.
+A learning-focused platform that mimics cloud database provisioning (think AWS RDS) running
+entirely on local hardware. Provision and manage database instances through a web UI — no manual
+Docker commands required.
 
-## 🚀 Quick Start
+## What it does
 
-### Prerequisites
-- Docker Desktop installed and running
-- Docker Compose v3.8+
+- Provision database containers (PostgreSQL, MySQL, MongoDB, Redis, MariaDB) through a UI
+- Choose engine version at provision time
+- Manage the full lifecycle: create → stop → start → update → destroy
+- View live container logs and inspect output in a built-in console
+- Connection strings generated automatically and displayed in the UI
 
-### Start the Platform
+## Stack
+
+| Layer | Technology                  |
+|---|-----------------------------|
+| Frontend | React, Vite, Tailwind CSS   |
+| Backend | Java 21, Spring Boot, Maven |
+| Orchestration | Terraform (Docker provider) |
+| Runtime | Docker Engine               |
+| Platform DB | PostgreSQL 15               |
+
+## Quick start
+
+**Prerequisites:** Docker Desktop running, Terraform installed and on PATH, Java 21+, Node 18+.
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd local-cloud-control-plane
-
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (clean state)
-docker-compose down -v
 ```
 
-### Access the Application
-
-Once all services are running:
-
-- **Frontend UI**: http://localhost:3000
-- **Backend API**: http://localhost:8080/api/v1
-- **Health Check**: http://localhost:8080/api/v1/actuator/health
-- **PostgreSQL**: localhost:5432
-
-## 📦 Services
-
-| Service | Container | Port | Description |
-|---------|-----------|------|-------------|
-| Frontend | control-plane-frontend | 3000 | React UI with Nginx |
-| Backend | control-plane-backend | 8080 | Spring Boot API |
-| Database | control-plane-db | 5432 | PostgreSQL 15 |
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐
-│   Browser   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│   Frontend      │  React + Nginx
-│   (Port 3000)   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│    Backend      │  Spring Boot
-│   (Port 8080)   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   PostgreSQL    │  Database
-│   (Port 5432)   │
-└─────────────────┘
-```
-
-## 🛠️ Development
-
-### Local Development (Hot Reload)
-
-**Backend:**
-```bash
-cd backend
-./mvnw spring-boot:run
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-# Access at http://localhost:5173
-```
-
-**Database:**
+Start the platform database (required by the backend):
 ```bash
 docker run -d \
+  --name control-plane-db \
   -e POSTGRES_DB=control_plane \
   -e POSTGRES_USER=control_plane \
   -e POSTGRES_PASSWORD=control_plane \
@@ -99,214 +42,110 @@ docker run -d \
   postgres:15-alpine
 ```
 
-### Build Services Individually
-
-**Backend:**
+Run the backend:
 ```bash
 cd backend
-./mvnw clean package
-docker build -t control-plane-backend .
+./mvnw spring-boot:run
 ```
 
-**Frontend:**
+Run the frontend (in a separate terminal):
 ```bash
 cd frontend
-npm run build
-docker build -t control-plane-frontend .
+npm install
+npm run dev
 ```
 
-## 📋 Docker Compose Commands
+Open **http://localhost:5173** in your browser.
 
-```bash
-# Start services
-docker-compose up -d
+## Access points
 
-# Start specific service
-docker-compose up -d postgres
+| Service | URL |
+|---|---|
+| Frontend UI | http://localhost:5173 |
+| Backend API | http://localhost:8080/api/v1 |
+| Health check | http://localhost:8080/api/v1/actuator/health |
+| Platform DB | localhost:5432 |
 
-# Rebuild and start
-docker-compose up -d --build
-
-# View logs
-docker-compose logs -f [service-name]
-
-# Stop services
-docker-compose stop
-
-# Remove containers
-docker-compose down
-
-# Remove containers and volumes
-docker-compose down -v
-
-# Restart service
-docker-compose restart [service-name]
-
-# View running services
-docker-compose ps
-```
-
-## 🔍 Health Checks
-
-All services include health checks:
-
-**PostgreSQL:**
-```bash
-docker exec control-plane-db pg_isready -U control_plane
-```
-
-**Backend:**
-```bash
-curl http://localhost:8080/api/v1/actuator/health
-```
-
-**Frontend:**
-```bash
-curl http://localhost:3000
-```
-
-## 💾 Data Persistence
-
-PostgreSQL data is persisted in a Docker volume:
-- Volume name: `postgres_data`
-- Location: Managed by Docker
-
-To backup the database:
-```bash
-docker exec control-plane-db pg_dump -U control_plane control_plane > backup.sql
-```
-
-To restore:
-```bash
-cat backup.sql | docker exec -i control-plane-db psql -U control_plane -d control_plane
-```
-
-## 🌐 Networking
-
-All services run on the `control-plane-network` bridge network:
-- Services can communicate using container names
-- Example: Backend connects to `postgres:5432`
-
-## 🐛 Troubleshooting
-
-### Services won't start
-```bash
-# Check Docker is running
-docker ps
-
-# Check logs
-docker-compose logs
-
-# Rebuild images
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-### Database connection issues
-```bash
-# Check PostgreSQL is running
-docker-compose ps postgres
-
-# Check PostgreSQL logs
-docker-compose logs postgres
-
-# Test connection
-docker exec -it control-plane-db psql -U control_plane -d control_plane
-```
-
-### Port conflicts
-If ports are already in use, modify `docker-compose.yml`:
-```yaml
-ports:
-  - "3001:80"    # Change frontend port
-  - "8081:8080"  # Change backend port
-  - "5433:5432"  # Change database port
-```
-
-## 📝 Environment Variables
-
-Create a `.env` file in the root directory (see `.env.example`):
-```env
-POSTGRES_DB=control_plane
-POSTGRES_USER=control_plane
-POSTGRES_PASSWORD=control_plane
-```
-
-## 🔐 Security Notes
-
-**Phase 1 MVP:**
-- No authentication required
-- CORS configured for local development
-- CSRF disabled for REST API
-
-**Production Considerations:**
-- Add authentication/authorization
-- Use secure passwords
-- Enable HTTPS
-- Restrict CORS origins
-- Enable CSRF protection
-
-## 📚 API Documentation
+## API
 
 Base URL: `http://localhost:8080/api/v1`
 
-### Endpoints
+```
+POST   /databases              Provision a new database instance
+GET    /databases              List all instances
+DELETE /databases/{id}         Destroy an instance
+POST   /databases/{id}/stop    Stop a running container
+POST   /databases/{id}/start   Start a stopped container
+PUT    /databases/{name}       Update name or port
+GET    /databases/{id}/logs    Fetch container logs
+GET    /databases/{id}/inspect Inspect container metadata
+```
 
-**Create Database:**
-```bash
+**Create example:**
+```json
 POST /databases
-Content-Type: application/json
-
 {
-  "name": "my-database",
+  "name": "my-db",
+  "type": "POSTGRESQL",
+  "version": "16",
   "port": 5433
 }
 ```
 
-**Get All Databases:**
-```bash
-GET /databases
+## Database status values
+
+| Status | Meaning |
+|---|---|
+| PROVISIONING | Terraform apply running |
+| RUNNING | Container up and healthy |
+| STOPPING | Docker stop in progress |
+| STOPPED | Container stopped, data intact |
+| STARTING | Docker start in progress |
+| UPDATING | Terraform recreating container |
+| FAILED | Last operation failed |
+| DESTROYING | Terraform destroy running |
+| DESTROYED | Container removed |
+
+## Supported engines and versions
+
+| Engine | Available versions | Default |
+|---|---|---|
+| PostgreSQL | 13, 14, 15, 16, 17 | 15 |
+| MySQL | 5.7, 8.0, 8.4 | 8.0 |
+| MariaDB | 10.6, 10.11, 11.1, 11.4 | 11.1 |
+| MongoDB | 5.0, 6.0, 7.0 | 7.0 |
+| Redis | 6.2, 7.0, 7.2 | 7.2 |
+
+## Architecture
+
+```
+Browser → React UI → Spring Boot API → Terraform → Docker Engine
+                           ↓
+                     PostgreSQL (platform metadata)
 ```
 
-**Get Database by ID:**
-```bash
-GET /databases/{id}
-```
+The backend never talks to Docker directly. It generates a `main.tf` file per database, runs
+`terraform apply`, and reads the outputs (connection string, container ID). Terraform owns the
+Docker lifecycle. The platform PostgreSQL only stores metadata — names, statuses, ports,
+connection strings, encrypted passwords.
 
-**Delete Database:**
-```bash
-DELETE /databases/{id}
-```
+## Port allocation
 
-## 🎯 Phase 1 Features
+- `5432` — platform PostgreSQL (reserved)
+- `5433+` — user-provisioned PostgreSQL instances (auto-assigned)
+- `3306+` — MySQL / MariaDB (auto-assigned)
+- `27017+` — MongoDB (auto-assigned)
+- `6379+` — Redis (auto-assigned)
 
-- ✅ PostgreSQL database provisioning
-- ✅ Create, List, Destroy operations
-- ✅ Port selection (auto or manual)
-- ✅ Status tracking (PROVISIONING, RUNNING, FAILED, etc.)
-- ✅ Docker containerization
-- ✅ Health checks
-- ⏳ Terraform integration (coming soon)
+## Troubleshooting
 
-## 📦 Technology Stack
+**Backend won't start** — check the platform PostgreSQL container is running on port 5432.
 
-- **Frontend**: React 19, Vite, Tailwind CSS 3
-- **Backend**: Spring Boot 4, Java 21, Maven
-- **Database**: PostgreSQL 15
-- **Containerization**: Docker, Docker Compose
-- **Web Server**: Nginx (for frontend)
+**Terraform not found** — ensure `terraform` is on your system PATH and `terraform -version` works.
 
-## 📄 License
+**Docker not found** — ensure Docker Desktop is running before starting the backend.
 
-This is an educational project for learning cloud infrastructure concepts.
+**Provisioning stuck at PROVISIONING** — check backend logs for Terraform output. The init step
+downloads the Docker provider (~40 MB) on first run, which can take a minute.
 
-## 🤝 Contributing
-
-This is a personal learning project. Feel free to fork and experiment!
-
-## 📞 Support
-
-For issues, check the troubleshooting section or review the logs:
-```bash
-docker-compose logs -f
-```
+**Port conflict** — use auto-assign or pick a port that isn't already bound on your machine.

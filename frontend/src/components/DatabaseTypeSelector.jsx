@@ -10,7 +10,9 @@ const DATABASE_TYPES = [
     borderColor: 'border-blue-500',
     bgColor: 'bg-blue-500/10',
     accentColor: 'border-blue-500/60 bg-blue-500/[0.07]',
-    defaultPort: 5433
+    defaultPort: 5433,
+    versions: ['17', '16', '15', '14', '13'],
+    defaultVersion: '15',
   },
   {
     id: 'MYSQL',
@@ -21,7 +23,9 @@ const DATABASE_TYPES = [
     borderColor: 'border-orange-500',
     bgColor: 'bg-orange-500/10',
     accentColor: 'border-orange-500/60 bg-orange-500/[0.07]',
-    defaultPort: 3306
+    defaultPort: 3306,
+    versions: ['8.4', '8.0', '5.7'],
+    defaultVersion: '8.0',
   },
   {
     id: 'MONGODB',
@@ -32,7 +36,9 @@ const DATABASE_TYPES = [
     borderColor: 'border-green-500',
     bgColor: 'bg-green-500/10',
     accentColor: 'border-green-500/60 bg-green-500/[0.07]',
-    defaultPort: 27017
+    defaultPort: 27017,
+    versions: ['7.0', '6.0', '5.0'],
+    defaultVersion: '7.0',
   },
   {
     id: 'REDIS',
@@ -43,7 +49,9 @@ const DATABASE_TYPES = [
     borderColor: 'border-red-500',
     bgColor: 'bg-red-500/10',
     accentColor: 'border-red-500/60 bg-red-500/[0.07]',
-    defaultPort: 6379
+    defaultPort: 6379,
+    versions: ['7.2', '7.0', '6.2'],
+    defaultVersion: '7.2',
   },
   {
     id: 'MARIADB',
@@ -54,7 +62,9 @@ const DATABASE_TYPES = [
     borderColor: 'border-teal-500',
     bgColor: 'bg-teal-500/10',
     accentColor: 'border-teal-500/60 bg-teal-500/[0.07]',
-    defaultPort: 3307
+    defaultPort: 3307,
+    versions: ['11.4', '11.1', '10.11', '10.6'],
+    defaultVersion: '11.1',
   }
 ];
 
