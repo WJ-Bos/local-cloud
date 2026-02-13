@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import wbos.backend.dto.resource.database.DatabaseResponseDto;
 import wbos.backend.dto.resource.database.UpdateDatabaseRequestDto;
 import wbos.backend.enums.DatabaseStatus;
@@ -41,7 +40,6 @@ public class DatabaseUpdateService {
      * @param requestDto The update request containing database name and new configuration
      * @return ResponseEntity with updated database details
      */
-    @Transactional
     public ResponseEntity<DatabaseResponseDto> update(UpdateDatabaseRequestDto requestDto) {
         log.info("Starting database update for: {}", requestDto.getName());
 

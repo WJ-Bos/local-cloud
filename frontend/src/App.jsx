@@ -148,11 +148,11 @@ function App() {
   };
 
   const handleUpdateDatabase = async (updateData) => {
+    toast.loading(`Updating ${updateData.name}...`, { id: 'update' });
     try {
-      setIsUpdateModalOpen(false);
-      toast.loading(`Updating ${updateData.name}...`, { id: 'update' });
       await databaseService.updateDatabase(updateData.name, updateData);
       toast.success(`Database "${updateData.name}" is being updated!`, { id: 'update' });
+      setIsUpdateModalOpen(false);
       setDatabaseToUpdate(null);
       fetchDatabases();
     } catch (error) {
