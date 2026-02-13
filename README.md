@@ -28,7 +28,7 @@ Docker commands required.
 
 ```bash
 git clone <repository-url>
-cd local-cloud-control-plane
+cd local-cloud
 ```
 
 Start the platform database (required by the backend):
