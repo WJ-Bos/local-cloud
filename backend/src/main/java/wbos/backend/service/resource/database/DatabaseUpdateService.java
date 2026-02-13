@@ -16,6 +16,7 @@ import wbos.backend.service.infrastructure.TerraformService;
 import wbos.backend.service.security.PasswordEncryptionService;
 
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -67,11 +68,14 @@ public class DatabaseUpdateService {
         // Check for changes
         String newName = requestDto.getNewName() != null ? requestDto.getNewName() : database.getName();
         Integer newPort = requestDto.getPort() != null ? requestDto.getPort() : database.getPort();
+        // null in the request means "keep existing"; explicitly sending a value overrides it
+        Integer newMemoryMb = requestDto.getMemoryMb() != null ? requestDto.getMemoryMb() : database.getMemoryMb();
 
         boolean hasNameChanged = !newName.equals(database.getName());
         boolean hasPortChanged = !newPort.equals(database.getPort());
+        boolean hasMemoryChanged = !Objects.equals(newMemoryMb, database.getMemoryMb());
 
-        if (!hasNameChanged && !hasPortChanged) {
+        if (!hasNameChanged && !hasPortChanged && !hasMemoryChanged) {
             log.info("No changes detected for database '{}' - all values are the same", database.getName());
             return ResponseEntity.status(HttpStatus.OK).body(mapToResponseDto(database));
         }
@@ -82,6 +86,11 @@ public class DatabaseUpdateService {
         }
         if (hasPortChanged) {
             changeLog.append(String.format("Port: %d -> %d; ", database.getPort(), newPort));
+        }
+        if (hasMemoryChanged) {
+            changeLog.append(String.format("Memory: %s -> %s; ",
+                    database.getMemoryMb() != null ? database.getMemoryMb() + "MB" : "unlimited",
+                    newMemoryMb != null ? newMemoryMb + "MB" : "unlimited"));
         }
 
         log.info("Updating database '{}': {}", database.getName(), changeLog);
@@ -99,6 +108,8 @@ public class DatabaseUpdateService {
         final DatabaseType dbType = updatingDatabase.getType();
         final String finalNewName = newName;
         final Integer finalNewPort = newPort;
+        final Integer finalNewMemoryMb = newMemoryMb;
+        final String dbVersion = updatingDatabase.getVersion();
         final String oldTerraformPath = updatingDatabase.getTerraformStatePath();
 
         CompletableFuture.runAsync(() -> {
@@ -131,7 +142,9 @@ public class DatabaseUpdateService {
                         dbType,
                         finalNewPort,
                         existingPassword,
-                        Paths.get(oldTerraformPath)
+                        Paths.get(oldTerraformPath),
+                        dbVersion,
+                        finalNewMemoryMb
                 );
 
                 // Fetch database from repository
@@ -145,6 +158,7 @@ public class DatabaseUpdateService {
                     // Update database with new configuration
                     db.setName(finalNewName);
                     db.setPort(finalNewPort);
+                    db.setMemoryMb(finalNewMemoryMb);
                     db.setConnectionString(result.connectionString());
                     db.setContainerId(result.containerId());
                     db.setStatus(DatabaseStatus.RUNNING);
@@ -200,6 +214,7 @@ public class DatabaseUpdateService {
                 .name(database.getName())
                 .type(database.getType())
                 .version(database.getVersion())
+                .memoryMb(database.getMemoryMb())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

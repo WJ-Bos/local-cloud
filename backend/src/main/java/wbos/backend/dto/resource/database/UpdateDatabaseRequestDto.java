@@ -31,4 +31,8 @@ public class UpdateDatabaseRequestDto {
     @Min(value = 5433, message = "Port must be at least 5433 (5432 is reserved for platform database)")
     @Max(value = 65535, message = "Port must be less than 65536")
     private Integer port;
+
+    @Min(value = 128, message = "Memory limit must be at least 128 MB")
+    @Max(value = 2048, message = "Memory limit cannot exceed 2048 MB")
+    private Integer memoryMb;
 }

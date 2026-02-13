@@ -63,6 +63,7 @@ const DatabaseTable = ({ databases, onAction }) => {
               <th className="px-6 py-3.5 text-left text-[10px] font-semibold text-primary-gray-600 uppercase tracking-widest">
                 Created
               </th>
+              <th className="px-4 py-3.5" />
             </tr>
           </thead>
           <tbody>
@@ -75,17 +76,9 @@ const DatabaseTable = ({ databases, onAction }) => {
                 >
                   {/* Name */}
                   <td className="px-6 py-4">
-                    <button onClick={() => handleDatabaseClick(database)} className="text-left group/name">
-                      <div className="text-sm font-medium text-white group-hover/name:text-white/70 transition-colors leading-none mb-1">
-                        {database.name}
-                      </div>
-                      <div className="text-[11px] text-primary-gray-700 flex items-center gap-1">
-                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        View details
-                      </div>
-                    </button>
+                    <div className="text-sm font-medium text-white leading-none">
+                      {database.name}
+                    </div>
                   </td>
 
                   {/* Type */}
@@ -132,6 +125,20 @@ const DatabaseTable = ({ databases, onAction }) => {
                         year: 'numeric',
                       })}
                     </span>
+                  </td>
+
+                  {/* Details */}
+                  <td className="px-4 py-4">
+                    <button
+                      onClick={() => handleDatabaseClick(database)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-primary-gray-600 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      title="View details"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.641 0-8.58-3.007-9.964-7.178z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               );

@@ -32,4 +32,8 @@ public abstract class DatabaseRequestDto {
         message = "Version must be a valid tag (e.g. 15, 8.0, 7.2)"
     )
     private String version;
+
+    @Min(value = 128, message = "Memory limit must be at least 128 MB")
+    @Max(value = 2048, message = "Memory limit cannot exceed 2048 MB")
+    private Integer memoryMb;
 }

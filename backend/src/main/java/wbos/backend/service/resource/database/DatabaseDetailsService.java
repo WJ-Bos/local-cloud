@@ -49,6 +49,7 @@ public class DatabaseDetailsService {
                 .name(database.getName())
                 .type(database.getType())
                 .version(database.getVersion())
+                .memoryMb(database.getMemoryMb())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

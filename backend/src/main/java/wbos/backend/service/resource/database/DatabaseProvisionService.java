@@ -55,6 +55,7 @@ public class DatabaseProvisionService {
                     .name(requestDto.getName())
                     .type(requestDto.getType())
                     .version(requestDto.getVersion())
+                    .memoryMb(requestDto.getMemoryMb())
                     .status(DatabaseStatus.PROVISIONING)
                     .port(assignedPort)
                     .terraformStatePath(String.format("/tmp/terraform/%s", requestDto.getName()))
@@ -73,17 +74,20 @@ public class DatabaseProvisionService {
             final DatabaseType dbType = savedDatabase.getType();
             final Integer dbPort = savedDatabase.getPort();
             final String dbVersion = savedDatabase.getVersion();
+            final Integer dbMemoryMb = savedDatabase.getMemoryMb();
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    log.info("Starting async Terraform provisioning for: {} (type: {}, version: {})", dbName, dbType, dbVersion);
+                    log.info("Starting async Terraform provisioning for: {} (type: {}, version: {}, memory: {}MB)",
+                            dbName, dbType, dbVersion, dbMemoryMb != null ? dbMemoryMb : "unlimited");
 
                     // Execute Terraform
                     TerraformResult result = terraformService.provisionDatabase(
                             dbName,
                             dbType,
                             dbPort,
-                            dbVersion
+                            dbVersion,
+                            dbMemoryMb
                     );
 
                     // Fetch database from repository
@@ -187,6 +191,7 @@ public class DatabaseProvisionService {
                 .name(database.getName())
                 .type(database.getType())
                 .version(database.getVersion())
+                .memoryMb(database.getMemoryMb())
                 .containerId(database.getContainerId())
                 .status(database.getStatus().name())
                 .port(database.getPort())

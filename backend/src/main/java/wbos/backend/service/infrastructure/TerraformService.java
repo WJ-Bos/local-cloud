@@ -38,8 +38,9 @@ public class TerraformService {
      * @param port External port
      * @return TerraformResult with connection details
      */
-    public TerraformResult provisionDatabase(String dbName, DatabaseType type, Integer port, String version) {
-        log.info("Starting Terraform provisioning for database: {} (type: {}, version: {})", dbName, type, version);
+    public TerraformResult provisionDatabase(String dbName, DatabaseType type, Integer port, String version, Integer memoryMb) {
+        log.info("Starting Terraform provisioning for database: {} (type: {}, version: {}, memory: {}MB)",
+                dbName, type, version, memoryMb != null ? memoryMb : "unlimited");
 
         try {
             // Create working directory
@@ -50,7 +51,7 @@ public class TerraformService {
             String password = generateSecurePassword();
 
             // Generate Terraform configuration using config provider
-            String terraformConfig = configProvider.generateTerraformConfig(type, dbName, port, password, version);
+            String terraformConfig = configProvider.generateTerraformConfig(type, dbName, port, password, version, memoryMb);
             Path mainTfPath = workingDir.resolve("main.tf");
             Files.writeString(mainTfPath, terraformConfig);
 
@@ -245,9 +246,10 @@ public class TerraformService {
      * @return TerraformResult with new connection details
      */
     public TerraformResult updateDatabase(String oldName, String newName, DatabaseType type,
-                                          Integer newPort, String existingPassword, Path oldWorkingDir) {
-        log.info("Starting Terraform update for {} database: {} -> {} (port: {})",
-                type, oldName, newName, newPort);
+                                          Integer newPort, String existingPassword, Path oldWorkingDir,
+                                          String version, Integer memoryMb) {
+        log.info("Starting Terraform update for {} database: {} -> {} (port: {}, memory: {}MB)",
+                type, oldName, newName, newPort, memoryMb != null ? memoryMb : "unlimited");
 
         try {
             // Step 1: Destroy old infrastructure if it exists
@@ -264,8 +266,8 @@ public class TerraformService {
             Path newWorkingDir = Paths.get(TERRAFORM_BASE_DIR, newName);
             Files.createDirectories(newWorkingDir);
 
-            // Step 3: Generate new Terraform configuration with existing password
-            String terraformConfig = configProvider.generateTerraformConfig(type, newName, newPort, existingPassword);
+            // Step 3: Generate new Terraform configuration with existing password, version, and memory
+            String terraformConfig = configProvider.generateTerraformConfig(type, newName, newPort, existingPassword, version, memoryMb);
             Path mainTfPath = newWorkingDir.resolve("main.tf");
             Files.writeString(mainTfPath, terraformConfig);
 

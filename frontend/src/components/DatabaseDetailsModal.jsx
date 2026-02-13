@@ -175,9 +175,10 @@ const DatabaseDetailsModal = ({ database, isOpen, onClose, onAction }) => {
                       <div className="island-inset rounded-xl px-4 py-3 space-y-3">
                         {[
                           { label: 'Engine',  value: typeInfo.name },
+                          { label: 'Version', value: database.version || '—' },
+                          { label: 'Memory',  value: database.memoryMb != null ? `${database.memoryMb} MB` : 'No Limit' },
                           { label: 'Status',  value: database.status },
                           { label: 'Created', value: new Date(database.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
-                          { label: 'Storage', value: 'Docker Volume' },
                         ].map(({ label, value }) => (
                           <div key={label} className="flex items-center justify-between">
                             <span className="text-xs text-primary-gray-600">{label}</span>

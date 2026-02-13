@@ -50,6 +50,9 @@ public class Database {
     @Column(name = "version", length = 20)
     private String version;
 
+    @Column(name = "memory_mb")
+    private Integer memoryMb;
+
     @Column
     private Integer port;
 

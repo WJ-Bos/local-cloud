@@ -21,19 +21,32 @@ public class DatabaseConfigProvider {
      * @return Terraform HCL configuration string
      */
     public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password) {
-        return generateTerraformConfig(type, dbName, port, password, null);
+        return generateTerraformConfig(type, dbName, port, password, null, null);
     }
 
     public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version) {
-        log.info("Generating Terraform config for type: {} version: {}", type, version != null ? version : "default");
+        return generateTerraformConfig(type, dbName, port, password, version, null);
+    }
+
+    public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version, Integer memoryMb) {
+        log.info("Generating Terraform config for type: {} version: {} memory: {}",
+                type, version != null ? version : "default", memoryMb != null ? memoryMb + "MB" : "unlimited");
 
         return switch (type) {
-            case POSTGRESQL -> generatePostgresConfig(dbName, port, password, resolveVersion(type, version));
-            case MYSQL      -> generateMySQLConfig(dbName, port, password, resolveVersion(type, version));
-            case MONGODB    -> generateMongoDBConfig(dbName, port, password, resolveVersion(type, version));
-            case REDIS      -> generateRedisConfig(dbName, port, password, resolveVersion(type, version));
-            case MARIADB    -> generateMariaDBConfig(dbName, port, password, resolveVersion(type, version));
+            case POSTGRESQL -> generatePostgresConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
+            case MYSQL      -> generateMySQLConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
+            case MONGODB    -> generateMongoDBConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
+            case REDIS      -> generateRedisConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
+            case MARIADB    -> generateMariaDBConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
         };
+    }
+
+    /** Returns a single HCL line for memory limit, or an empty string when there is no limit. */
+    private String memoryLine(Integer memoryMb) {
+        if (memoryMb != null && memoryMb > 0) {
+            return String.format("  memory = %d%n", memoryMb);
+        }
+        return "";
     }
 
     private String resolveVersion(DatabaseType type, String version) {
@@ -86,7 +99,7 @@ public class DatabaseConfigProvider {
 
     // ==================== PostgreSQL Configuration ====================
 
-    private String generatePostgresConfig(String dbName, Integer port, String password, String version) {
+    private String generatePostgresConfig(String dbName, Integer port, String password, String version, Integer memoryMb) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -104,7 +117,7 @@ public class DatabaseConfigProvider {
                 resource "docker_container" "database" {
                   name  = "%s"
                   image = "postgres:%s"
-
+                %s
                   env = [
                     "POSTGRES_DB=%s",
                     "POSTGRES_USER=postgres",
@@ -126,12 +139,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, version, dbName, password, port, password, port, dbName);
+                """, dbName, version, memoryLine(memoryMb), dbName, password, port, password, port, dbName);
     }
 
     // ==================== MySQL Configuration ====================
 
-    private String generateMySQLConfig(String dbName, Integer port, String password, String version) {
+    private String generateMySQLConfig(String dbName, Integer port, String password, String version, Integer memoryMb) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -149,7 +162,7 @@ public class DatabaseConfigProvider {
                 resource "docker_container" "database" {
                   name  = "%s"
                   image = "mysql:%s"
-
+                %s
                   env = [
                     "MYSQL_ROOT_PASSWORD=%s",
                     "MYSQL_DATABASE=%s"
@@ -170,12 +183,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, version, password, dbName, port, password, port, dbName);
+                """, dbName, version, memoryLine(memoryMb), password, dbName, port, password, port, dbName);
     }
 
     // ==================== MongoDB Configuration ====================
 
-    private String generateMongoDBConfig(String dbName, Integer port, String password, String version) {
+    private String generateMongoDBConfig(String dbName, Integer port, String password, String version, Integer memoryMb) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -193,7 +206,7 @@ public class DatabaseConfigProvider {
                 resource "docker_container" "database" {
                   name  = "%s"
                   image = "mongo:%s"
-
+                %s
                   env = [
                     "MONGO_INITDB_ROOT_USERNAME=root",
                     "MONGO_INITDB_ROOT_PASSWORD=%s",
@@ -215,12 +228,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, version, password, dbName, port, password, port, dbName);
+                """, dbName, version, memoryLine(memoryMb), password, dbName, port, password, port, dbName);
     }
 
     // ==================== Redis Configuration ====================
 
-    private String generateRedisConfig(String dbName, Integer port, String password, String version) {
+    private String generateRedisConfig(String dbName, Integer port, String password, String version, Integer memoryMb) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -238,7 +251,7 @@ public class DatabaseConfigProvider {
                 resource "docker_container" "database" {
                   name  = "%s"
                   image = "redis:%s-alpine"
-
+                %s
                   command = ["redis-server", "--requirepass", "%s"]
 
                   ports {
@@ -256,12 +269,12 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, version, password, port, password, port);
+                """, dbName, version, memoryLine(memoryMb), password, port, password, port);
     }
 
     // ==================== MariaDB Configuration ====================
 
-    private String generateMariaDBConfig(String dbName, Integer port, String password, String version) {
+    private String generateMariaDBConfig(String dbName, Integer port, String password, String version, Integer memoryMb) {
         return String.format("""
                 terraform {
                   required_providers {
@@ -279,7 +292,7 @@ public class DatabaseConfigProvider {
                 resource "docker_container" "database" {
                   name  = "%s"
                   image = "mariadb:%s"
-
+                %s
                   env = [
                     "MARIADB_ROOT_PASSWORD=%s",
                     "MARIADB_DATABASE=%s"
@@ -300,6 +313,6 @@ public class DatabaseConfigProvider {
                 output "container_id" {
                   value = docker_container.database.id
                 }
-                """, dbName, version, password, dbName, port, password, port, dbName);
+                """, dbName, version, memoryLine(memoryMb), password, dbName, port, password, port, dbName);
     }
 }
