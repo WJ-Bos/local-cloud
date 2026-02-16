@@ -32,10 +32,6 @@ public class DatabaseUpdateService {
     /**
      * Update an existing database instance
      *
-     * Currently supports:
-     * - Name changes (will trigger container recreation via Terraform)
-     * - Port changes (will trigger container recreation via Terraform)
-     *
      * The database MUST be in STOPPED status to be updated.
      *
      * @param requestDto The update request containing database name and new configuration
@@ -65,10 +61,9 @@ public class DatabaseUpdateService {
                             .build());
         }
 
-        // Check for changes
         String newName = requestDto.getNewName() != null ? requestDto.getNewName() : database.getName();
         Integer newPort = requestDto.getPort() != null ? requestDto.getPort() : database.getPort();
-        // null in the request means "keep existing"; explicitly sending a value overrides it
+
         Integer newMemoryMb = requestDto.getMemoryMb() != null ? requestDto.getMemoryMb() : database.getMemoryMb();
 
         boolean hasNameChanged = !newName.equals(database.getName());
@@ -95,11 +90,9 @@ public class DatabaseUpdateService {
 
         log.info("Updating database '{}': {}", database.getName(), changeLog);
 
-        // Set status to UPDATING
         database.setStatus(DatabaseStatus.UPDATING);
         Database updatingDatabase = databaseRepository.save(database);
 
-        // Return response immediately with UPDATING status
         DatabaseResponseDto responseDto = mapToResponseDto(updatingDatabase);
 
         // Execute Terraform update asynchronously
@@ -147,7 +140,6 @@ public class DatabaseUpdateService {
                         finalNewMemoryMb
                 );
 
-                // Fetch database from repository
                 Database db = databaseRepository.findById(dbId).orElse(null);
                 if (db == null) {
                     log.error("Database not found: {}", dbId);

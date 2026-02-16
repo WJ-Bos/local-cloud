@@ -16,6 +16,4 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CreateDataBaseRequestDto extends DatabaseRequestDto {
-    // All fields are inherited from DatabaseRequestDto
-    // Add create-specific fields here if needed in the future
 }

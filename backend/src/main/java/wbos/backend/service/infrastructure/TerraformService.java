@@ -91,12 +91,12 @@ public class TerraformService {
     }
 
     /**
-     * Destroys a PostgreSQL database using Terraform
+     * Destroys a database instance using Terraform
      *
      * @param workingDir Terraform working directory
      * @return true if successful
      */
-    public boolean destroyPostgres(Path workingDir) {
+    public boolean destroyInstance(Path workingDir) {
         log.info("Starting Terraform destroy in: {}", workingDir);
 
         try {
@@ -252,7 +252,6 @@ public class TerraformService {
                 type, oldName, newName, newPort, memoryMb != null ? memoryMb : "unlimited");
 
         try {
-            // Step 1: Destroy old infrastructure if it exists
             if (Files.exists(oldWorkingDir)) {
                 log.info("Destroying old infrastructure at: {}", oldWorkingDir);
                 if (!executeTerraformCommand(oldWorkingDir, "destroy", "-auto-approve")) {
@@ -262,32 +261,27 @@ public class TerraformService {
                 deleteDirectory(oldWorkingDir);
             }
 
-            // Step 2: Create new working directory with new name
             Path newWorkingDir = Paths.get(TERRAFORM_BASE_DIR, newName);
             Files.createDirectories(newWorkingDir);
 
-            // Step 3: Generate new Terraform configuration with existing password, version, and memory
             String terraformConfig = configProvider.generateTerraformConfig(type, newName, newPort, existingPassword, version, memoryMb);
             Path mainTfPath = newWorkingDir.resolve("main.tf");
             Files.writeString(mainTfPath, terraformConfig);
 
             log.info("Generated updated {} Terraform config at: {}", type, mainTfPath);
 
-            // Step 4: Execute terraform init
             log.info("Executing terraform init in: {}", newWorkingDir);
             if (!executeTerraformCommand(newWorkingDir, "init")) {
                 return new TerraformResult(false, null, null, null,
                         "Terraform init failed during update", newWorkingDir);
             }
 
-            // Step 5: Execute terraform apply
             log.info("Executing terraform apply in: {}", newWorkingDir);
             if (!executeTerraformCommand(newWorkingDir, "apply", "-auto-approve")) {
                 return new TerraformResult(false, null, null, null,
                         "Terraform apply failed during update", newWorkingDir);
             }
 
-            // Step 6: Extract outputs
             Map<String, String> outputs = extractTerraformOutputs(newWorkingDir);
             String connectionString = outputs.getOrDefault("connection_string",
                     configProvider.generateConnectionString(type, newName, newPort, existingPassword));

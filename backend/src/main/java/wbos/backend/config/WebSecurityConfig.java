@@ -18,7 +18,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * This configuration:
  * - Disables CSRF for stateless REST API
  * - Configures CORS to allow frontend access
- * - Permits all requests (authentication to be added in future phases)
+ * - Permits all requests
  * - Uses stateless session management
  */
 @Configuration
@@ -29,12 +29,6 @@ public class WebSecurityConfig {
 
     private final CorsProperties corsProperties;
 
-    /**
-     * Configure security filter chain
-     *
-     * Phase 1 MVP: All endpoints are public
-     * Future phases will add authentication/authorization
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("Configuring security filter chain");
@@ -53,12 +47,8 @@ public class WebSecurityConfig {
                 // Actuator endpoints for health checks
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
-                // Phase 1: Permit all requests (no authentication)
                 .anyRequest().permitAll()
 
-                // Future phases: Uncomment below for authentication
-                // .requestMatchers("/auth/**").permitAll()
-                // .anyRequest().authenticated()
             );
 
         log.info("Security filter chain configured successfully");

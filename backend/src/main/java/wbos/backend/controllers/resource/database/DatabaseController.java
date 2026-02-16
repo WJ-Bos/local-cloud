@@ -32,8 +32,6 @@ public class DatabaseController {
     private final DatabaseControlService databaseControlService;
 
     /**
-     * Creates a new PostgreSQL database instance
-     *
      * @param dataBaseRequestDto The database creation request
      * @return ResponseEntity with created database details
      */
@@ -60,10 +58,6 @@ public class DatabaseController {
 
     /**
      * Updates an existing database instance
-     *
-     * Currently supports:
-     * - Name changes (via newName field in request body)
-     * - Port changes (via port field in request body)
      *
      * The name in the path must match the name in the request body.
      * Use newName field to rename the database.

@@ -30,7 +30,7 @@ public class DatabaseProvisionService {
     private final DatabaseConfigProvider configProvider;
 
     /**
-     * Provisions a new PostgreSQL database
+     * Provisions a new database
      *
      * @param requestDto The database creation request
      * @return ResponseEntity with database details
@@ -40,7 +40,6 @@ public class DatabaseProvisionService {
         log.info("Starting database provisioning for: {}", requestDto.getName());
 
         try {
-            // Use provided port or find next available port
             Integer assignedPort = requestDto.getPort() != null
                     ? requestDto.getPort()
                     : findNextAvailablePort(requestDto.getType());
@@ -50,7 +49,6 @@ public class DatabaseProvisionService {
                     requestDto.getName(),
                     requestDto.getPort() != null);
 
-            // Create database entity with PROVISIONING status
             Database database = Database.builder()
                     .name(requestDto.getName())
                     .type(requestDto.getType())
@@ -61,14 +59,11 @@ public class DatabaseProvisionService {
                     .terraformStatePath(String.format("/tmp/terraform/%s", requestDto.getName()))
                     .build();
 
-            // Save to database
             Database savedDatabase = databaseRepository.save(database);
             log.info("Database metadata saved with ID: {}", savedDatabase.getId());
 
-            // Convert to DTO for immediate response
             DatabaseResponseDto responseDto = convertToDto(savedDatabase);
 
-            // Execute Terraform provisioning asynchronously
             final Long dbId = savedDatabase.getId();
             final String dbName = savedDatabase.getName();
             final DatabaseType dbType = savedDatabase.getType();
@@ -90,7 +85,6 @@ public class DatabaseProvisionService {
                             dbMemoryMb
                     );
 
-                    // Fetch database from repository
                     Database db = databaseRepository.findById(dbId).orElse(null);
                     if (db == null) {
                         log.error("Database not found: {}", dbId);
@@ -98,12 +92,10 @@ public class DatabaseProvisionService {
                     }
 
                     if (result.success()) {
-                        // Update database with connection details
                         db.setConnectionString(result.connectionString());
                         db.setContainerId(result.containerId());
                         db.setStatus(DatabaseStatus.RUNNING);
 
-                        // Encrypt and store password
                         String encryptedPassword = passwordEncryptionService.encrypt(result.password());
                         db.setEncryptedPassword(encryptedPassword);
 

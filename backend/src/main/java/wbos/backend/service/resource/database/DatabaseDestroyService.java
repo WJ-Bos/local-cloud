@@ -25,7 +25,6 @@ public class DatabaseDestroyService {
     private final TerraformService terraformService;
 
     /**
-     * Destroys a PostgreSQL database
      *
      * @param databaseId The ID of the database to destroy
      * @return ResponseEntity with destruction status
@@ -62,7 +61,7 @@ public class DatabaseDestroyService {
                     Path workingDir = Paths.get(terraformPath);
 
                     // Execute Terraform destroy
-                    boolean success = terraformService.destroyPostgres(workingDir);
+                    boolean success = terraformService.destroyInstance(workingDir);
 
                     // Fetch database from repository
                     Database db = databaseRepository.findById(dbId).orElse(null);

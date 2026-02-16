@@ -11,23 +11,6 @@ import wbos.backend.enums.DatabaseType;
 @Slf4j
 public class DatabaseConfigProvider {
 
-    /**
-     * Generates Terraform configuration for the specified database type
-     *
-     * @param type Database type
-     * @param dbName Database/container name
-     * @param port External port mapping
-     * @param password Database password
-     * @return Terraform HCL configuration string
-     */
-    public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password) {
-        return generateTerraformConfig(type, dbName, port, password, null, null);
-    }
-
-    public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version) {
-        return generateTerraformConfig(type, dbName, port, password, version, null);
-    }
-
     public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version, Integer memoryMb) {
         log.info("Generating Terraform config for type: {} version: {} memory: {}",
                 type, version != null ? version : "default", memoryMb != null ? memoryMb + "MB" : "unlimited");

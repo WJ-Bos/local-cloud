@@ -21,8 +21,7 @@ public class PasswordEncryptionService {
     private final SecretKeySpec secretKey;
 
     public PasswordEncryptionService(
-            @Value("${security.encryption.key:MySecretEncryptionKey123456}") String encryptionKey) {
-        // Ensure key is exactly 16, 24, or 32 bytes for AES
+            @Value("${security.encryption.key}") String encryptionKey) {
         String paddedKey = String.format("%-32s", encryptionKey).substring(0, 32);
         this.secretKey = new SecretKeySpec(paddedKey.getBytes(StandardCharsets.UTF_8), ALGORITHM);
     }
