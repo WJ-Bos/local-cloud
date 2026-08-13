@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import Modal from './Modal';
 
-function ProvisioningModal({ isOpen, databaseName, onComplete }) {
+function ProvisioningModal({
+  isOpen,
+  databaseName,
+  onComplete,
+  title = 'Provisioning Database',
+  infoText = "Your database will be available shortly. You'll be able to connect once provisioning is complete.",
+}) {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -47,7 +53,7 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
   }, [isOpen]);
 
   return (
-    <Modal isOpen={isOpen} onClose={() => {}} title="Provisioning Database" hideCloseButton>
+    <Modal isOpen={isOpen} onClose={() => {}} title={title} hideCloseButton>
       <div className="space-y-6">
         {/* Database Name */}
         <div className="text-center">
@@ -141,7 +147,7 @@ function ProvisioningModal({ isOpen, databaseName, onComplete }) {
         {/* Info */}
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
           <p className="text-xs text-blue-300">
-            Your database will be available shortly. You'll be able to connect once provisioning is complete.
+            {infoText}
           </p>
         </div>
       </div>

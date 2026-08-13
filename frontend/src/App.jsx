@@ -7,10 +7,12 @@ import ProvisioningModal from './components/ProvisioningModal';
 import DeleteConfirmationModal from './components/DeleteConfirmationModal';
 import UpdateDatabaseModal from './components/UpdateDatabaseModal';
 import DatabaseConsoleModal from './components/DatabaseConsoleModal';
+import InstanceDashboard from './components/InstanceDashboard';
 import { DATABASE_TYPES } from './components/DatabaseTypeSelector';
 import databaseService from './services/databaseService';
 
 function App() {
+  const [view, setView] = useState('storage');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProvisioningModalOpen, setIsProvisioningModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -216,10 +218,27 @@ function App() {
                 <span className="text-white font-semibold text-sm tracking-tight">Cloud Control</span>
               </div>
 
-              <div className="hidden md:flex items-center">
-                <span className="px-3 py-1 text-xs font-medium text-white bg-white/[0.08] rounded-lg border border-white/[0.1]">
+              <div className="hidden md:flex items-center gap-1.5">
+                <button
+                  onClick={() => setView('storage')}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                    view === 'storage'
+                      ? 'text-white bg-white/[0.08] border-white/[0.1]'
+                      : 'text-primary-gray-500 bg-transparent border-transparent hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
                   Storage
-                </span>
+                </button>
+                <button
+                  onClick={() => setView('compute')}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                    view === 'compute'
+                      ? 'text-white bg-white/[0.08] border-white/[0.1]'
+                      : 'text-primary-gray-500 bg-transparent border-transparent hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  Compute
+                </button>
               </div>
             </div>
 
@@ -246,6 +265,12 @@ function App() {
       {/* ── Main ────────────────────────────────────────────────────── */}
       <main className="mx-auto max-w-[1800px] px-6 pb-12 pt-6">
 
+        {/* ── Compute view ────────────────────────────────────────────── */}
+        {view === 'compute' && <InstanceDashboard />}
+
+        {/* ── Storage view ────────────────────────────────────────────── */}
+        {view === 'storage' && (
+        <>
         {/* Page header */}
         <div className="flex items-end justify-between mb-7">
           <div>
@@ -349,6 +374,8 @@ function App() {
             )}
           </div>
         </div>
+        </>
+        )}
       </main>
 
       {/* ── Modals ──────────────────────────────────────────────────── */}

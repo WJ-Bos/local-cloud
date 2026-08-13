@@ -4,6 +4,7 @@ const StatusBadge = ({ status }) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'PROVISIONING':
+      case 'PENDING':
         return {
           color: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
           icon: (
@@ -67,6 +68,7 @@ const StatusBadge = ({ status }) => {
           ),
         };
       case 'DESTROYING':
+      case 'TERMINATING':
         return {
           color: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
           icon: (
@@ -76,6 +78,7 @@ const StatusBadge = ({ status }) => {
           ),
         };
       case 'DESTROYED':
+      case 'TERMINATED':
         return {
           color: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
           icon: (
