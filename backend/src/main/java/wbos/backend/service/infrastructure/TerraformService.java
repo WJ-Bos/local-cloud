@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import wbos.backend.enums.DatabaseType;
+import wbos.backend.enums.InstanceType;
+import wbos.backend.enums.MachineImage;
 import wbos.backend.records.TerraformResult;
 
 import java.io.BufferedReader;
@@ -25,8 +27,10 @@ import java.util.Map;
 public class TerraformService {
 
     private final DatabaseConfigProvider configProvider;
+    private final InstanceConfigProvider instanceConfigProvider;
 
     private static final String TERRAFORM_BASE_DIR = "/tmp/terraform";
+    private static final String INSTANCE_TERRAFORM_BASE_DIR = "/tmp/terraform/instances";
     private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final int PASSWORD_LENGTH = 24;
 
@@ -85,6 +89,140 @@ public class TerraformService {
 
         } catch (Exception e) {
             log.error("Failed to provision {} database: {}", type, dbName, e);
+            return new TerraformResult(false, null, null, null,
+                    e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Provisions a compute instance using Terraform
+     *
+     * @param instanceName Instance name
+     * @param image Machine image (AMI equivalent)
+     * @param instanceType Instance type (size)
+     * @param sshPort External SSH port
+     * @param userData Optional startup script
+     * @return TerraformResult with SSH connection details
+     */
+    public TerraformResult provisionInstance(String instanceName, MachineImage image, InstanceType instanceType,
+                                             Integer sshPort, String userData) {
+        log.info("Starting Terraform provisioning for instance: {} (image: {}, type: {}, sshPort: {})",
+                instanceName, image, instanceType.getApiName(), sshPort);
+
+        try {
+            // Create working directory
+            Path workingDir = Paths.get(INSTANCE_TERRAFORM_BASE_DIR, instanceName);
+            Files.createDirectories(workingDir);
+
+            // Generate secure root password
+            String password = generateSecurePassword();
+
+            // Generate Terraform configuration using instance config provider
+            String terraformConfig = instanceConfigProvider.generateTerraformConfig(
+                    image, instanceName, sshPort, password, instanceType, userData);
+            Path mainTfPath = workingDir.resolve("main.tf");
+            Files.writeString(mainTfPath, terraformConfig);
+
+            log.info("Generated {} Terraform config at: {}", image, mainTfPath);
+
+            // Execute terraform init
+            log.info("Executing terraform init in: {}", workingDir);
+            if (!executeTerraformCommand(workingDir, "init")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform init failed", workingDir);
+            }
+
+            // Execute terraform apply
+            log.info("Executing terraform apply in: {}", workingDir);
+            if (!executeTerraformCommand(workingDir, "apply", "-auto-approve")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform apply failed", workingDir);
+            }
+
+            // Extract outputs
+            Map<String, String> outputs = extractTerraformOutputs(workingDir);
+            String sshCommand = outputs.getOrDefault("connection_string",
+                    instanceConfigProvider.generateSshCommand(sshPort));
+            String containerId = outputs.get("container_id");
+
+            log.info("Successfully provisioned {} instance: {} (container: {})",
+                    image, instanceName, containerId);
+
+            return new TerraformResult(true, sshCommand, containerId, password,
+                    null, workingDir);
+
+        } catch (Exception e) {
+            log.error("Failed to provision {} instance: {}", image, instanceName, e);
+            return new TerraformResult(false, null, null, null,
+                    e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Updates a compute instance using Terraform
+     * This destroys the old infrastructure and recreates it with new configuration
+     *
+     * @param oldName Old instance name
+     * @param newName New instance name (can be same as oldName)
+     * @param image Machine image
+     * @param instanceType New instance type
+     * @param newSshPort New SSH port
+     * @param existingPassword Existing root password to preserve
+     * @param oldWorkingDir Old Terraform working directory
+     * @param userData Startup script to preserve
+     * @return TerraformResult with new SSH connection details
+     */
+    public TerraformResult updateInstance(String oldName, String newName, MachineImage image,
+                                          InstanceType instanceType, Integer newSshPort,
+                                          String existingPassword, Path oldWorkingDir, String userData) {
+        log.info("Starting Terraform update for {} instance: {} -> {} (type: {}, sshPort: {})",
+                image, oldName, newName, instanceType.getApiName(), newSshPort);
+
+        try {
+            if (Files.exists(oldWorkingDir)) {
+                log.info("Destroying old infrastructure at: {}", oldWorkingDir);
+                if (!executeTerraformCommand(oldWorkingDir, "destroy", "-auto-approve")) {
+                    log.warn("Failed to destroy old infrastructure, continuing with update...");
+                }
+                // Delete old directory
+                deleteDirectory(oldWorkingDir);
+            }
+
+            Path newWorkingDir = Paths.get(INSTANCE_TERRAFORM_BASE_DIR, newName);
+            Files.createDirectories(newWorkingDir);
+
+            String terraformConfig = instanceConfigProvider.generateTerraformConfig(
+                    image, newName, newSshPort, existingPassword, instanceType, userData);
+            Path mainTfPath = newWorkingDir.resolve("main.tf");
+            Files.writeString(mainTfPath, terraformConfig);
+
+            log.info("Generated updated {} Terraform config at: {}", image, mainTfPath);
+
+            log.info("Executing terraform init in: {}", newWorkingDir);
+            if (!executeTerraformCommand(newWorkingDir, "init")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform init failed during update", newWorkingDir);
+            }
+
+            log.info("Executing terraform apply in: {}", newWorkingDir);
+            if (!executeTerraformCommand(newWorkingDir, "apply", "-auto-approve")) {
+                return new TerraformResult(false, null, null, null,
+                        "Terraform apply failed during update", newWorkingDir);
+            }
+
+            Map<String, String> outputs = extractTerraformOutputs(newWorkingDir);
+            String sshCommand = outputs.getOrDefault("connection_string",
+                    instanceConfigProvider.generateSshCommand(newSshPort));
+            String containerId = outputs.get("container_id");
+
+            log.info("Successfully updated {} instance: {} -> {} (container: {})",
+                    image, oldName, newName, containerId);
+
+            return new TerraformResult(true, sshCommand, containerId, existingPassword,
+                    null, newWorkingDir);
+
+        } catch (Exception e) {
+            log.error("Failed to update instance: {} -> {}", oldName, newName, e);
             return new TerraformResult(false, null, null, null,
                     e.getMessage(), null);
         }
