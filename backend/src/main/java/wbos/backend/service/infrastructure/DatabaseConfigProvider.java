@@ -1,6 +1,7 @@
 package wbos.backend.service.infrastructure;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import wbos.backend.enums.DatabaseType;
 
@@ -11,17 +12,26 @@ import wbos.backend.enums.DatabaseType;
 @Slf4j
 public class DatabaseConfigProvider {
 
+    private final String dockerHost;
+
+    public DatabaseConfigProvider(@Value("${app.docker.host:unix:///var/run/docker.sock}") String dockerHost) {
+        this.dockerHost = dockerHost;
+    }
+
     public String generateTerraformConfig(DatabaseType type, String dbName, Integer port, String password, String version, Integer memoryMb) {
         log.info("Generating Terraform config for type: {} version: {} memory: {}",
                 type, version != null ? version : "default", memoryMb != null ? memoryMb + "MB" : "unlimited");
 
-        return switch (type) {
+        String config = switch (type) {
             case POSTGRESQL -> generatePostgresConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
             case MYSQL      -> generateMySQLConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
             case MONGODB    -> generateMongoDBConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
             case REDIS      -> generateRedisConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
             case MARIADB    -> generateMariaDBConfig(dbName, port, password, resolveVersion(type, version), memoryMb);
         };
+
+        // Templates default to the Linux socket; swap in the configured host (named pipe on Windows)
+        return config.replace("unix:///var/run/docker.sock", dockerHost);
     }
 
     /** Returns a single HCL line for memory limit, or an empty string when there is no limit. */
